@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
-import { Conversation } from './conversation';
+import { ClaudeConversation } from './claude-conversation';
 
 const defaultProps = {
   screenWidth: 'full' as const,
@@ -8,12 +8,12 @@ const defaultProps = {
   platform: 'desktop' as const,
 };
 
-describe('Conversation', () => {
+describe('ClaudeConversation', () => {
   it('renders user message and children in assistant area', () => {
     render(
-      <Conversation {...defaultProps} userMessage="Hello, show me places">
+      <ClaudeConversation {...defaultProps} userMessage="Hello, show me places">
         <div data-testid="app-ui">App UI Content</div>
-      </Conversation>
+      </ClaudeConversation>
     );
 
     expect(screen.getByText('Hello, show me places')).toBeInTheDocument();
@@ -23,9 +23,9 @@ describe('Conversation', () => {
 
   it('renders app name and emoji icon', () => {
     render(
-      <Conversation {...defaultProps} appName="TravelBot" appIcon="✈️">
+      <ClaudeConversation {...defaultProps} appName="TravelBot" appIcon="✈️">
         <div>Content</div>
-      </Conversation>
+      </ClaudeConversation>
     );
 
     expect(screen.getByText('TravelBot')).toBeInTheDocument();
@@ -35,17 +35,35 @@ describe('Conversation', () => {
 
   it('renders fullscreen mode with chrome overlay and stable children', () => {
     const { container } = render(
-      <Conversation {...defaultProps} displayMode="fullscreen">
+      <ClaudeConversation {...defaultProps} displayMode="fullscreen">
         <div data-testid="fullscreen-content">Fullscreen App</div>
-      </Conversation>
+      </ClaudeConversation>
     );
 
-    // Children stay mounted at stable tree position
     expect(screen.getByTestId('fullscreen-content')).toBeInTheDocument();
-    // Fullscreen chrome overlay has a footer with input
     expect(container.querySelector('footer')).toBeInTheDocument();
-    expect(screen.getAllByPlaceholderText('Message sunpeak.ai').length).toBeGreaterThan(0);
-    // Fullscreen header has a close button
-    expect(screen.getByLabelText('Close')).toBeInTheDocument();
+    expect(screen.getAllByPlaceholderText('Reply to sunpeak...').length).toBeGreaterThan(0);
+    expect(screen.getByLabelText('Back')).toBeInTheDocument();
+  });
+
+  it('renders sunpeak.ai header text', () => {
+    render(
+      <ClaudeConversation {...defaultProps}>
+        <div>Content</div>
+      </ClaudeConversation>
+    );
+
+    expect(screen.getByText('sunpeak.ai')).toBeInTheDocument();
+  });
+
+  it('renders pip mode with close button', () => {
+    render(
+      <ClaudeConversation {...defaultProps} displayMode="pip">
+        <div data-testid="pip-content">PiP App</div>
+      </ClaudeConversation>
+    );
+
+    expect(screen.getByTestId('pip-content')).toBeInTheDocument();
+    expect(screen.getByLabelText('Close picture-in-picture')).toBeInTheDocument();
   });
 });

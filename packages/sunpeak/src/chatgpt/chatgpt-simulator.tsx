@@ -9,17 +9,17 @@ import {
   SidebarCheckbox,
   SidebarTextarea,
   SidebarToggle,
-} from './simple-sidebar';
-import { Conversation } from './conversation';
-import { IframeResource, extractResourceCSP } from './iframe-resource';
-import { ThemeProvider } from './theme-provider';
+} from '../simulator/simple-sidebar';
+import { Conversation } from './chatgpt-conversation';
+import { IframeResource, extractResourceCSP } from '../simulator/iframe-resource';
+import { ThemeProvider } from '../simulator/theme-provider';
 import type {
   McpUiHostContext,
   McpUiDisplayMode,
   McpUiTheme,
 } from '@modelcontextprotocol/ext-apps';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import type { ScreenWidth } from './chatgpt-simulator-types';
+import type { ScreenWidth } from '../simulator/simulator-types';
 import type { Simulation } from '../types/simulation';
 
 type Platform = NonNullable<McpUiHostContext['platform']>;

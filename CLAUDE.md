@@ -5,7 +5,7 @@ Sunpeak is a framework for building MCP Apps with interactive UIs that run insid
 ## Quick Reference
 
 ```bash
-pnpm --filter sunpeak test -- --run    # Unit tests (vitest, 118 tests)
+pnpm --filter sunpeak test -- --run    # Unit tests (vitest)
 pnpm --filter sunpeak lint             # ESLint
 pnpm --filter sunpeak typecheck        # tsc --noEmit
 pnpm --filter sunpeak build            # Vite build
@@ -15,10 +15,19 @@ pnpm --filter sunpeak generate-examples  # Regenerate examples/ from template
 
 ## Architecture
 
-**All resource content renders inside iframes** — never directly in the host page. This matches how ChatGPT hosts apps and enables direct re-export of SDK hooks.
+**All resource content renders inside iframes** — never directly in the host page. This matches how AI chat hosts (ChatGPT, Claude) display apps and enables direct re-export of SDK hooks.
+
+### Multi-Host Simulator
+
+The simulator supports multiple host platforms via a **HostShell** abstraction. Each host provides:
+- **Conversation chrome** — the visual shell (message bubbles, headers, input areas)
+- **Theme** — host-specific CSS variables and theme application
+- **Host info & capabilities** — reported to the app via MCP protocol
+
+Switching hosts in the sidebar changes the conversation chrome, theming, and reported host info/capabilities. The sidebar controls, iframe infrastructure, and state management are shared.
 
 ### Rendering Flow
-1. `ChatGPTSimulator` (host page) → `Conversation` → `IframeResource`
+1. `Simulator` (host page) → `HostShell.Conversation` → `IframeResource`
 2. `IframeResource` creates an `<iframe>` with either:
    - `src` prop (dev mode: HTML page URL with Vite HMR)
    - `scriptSrc` prop → `srcdoc` (prod mode: generated HTML wrapping a JS bundle)
@@ -34,7 +43,20 @@ Tests use `page.frameLocator('iframe')` to access resource content inside iframe
 packages/sunpeak/
 ├── src/
 │   ├── index.ts              # Main barrel: SDK re-exports + hooks + types
-│   ├── chatgpt/              # Simulator components (ChatGPTSimulator, IframeResource, McpAppHost)
+│   ├── simulator/            # Generic multi-host simulator core
+│   │   ├── simulator.tsx     # Simulator component (host picker, sidebar, delegates to shell)
+│   │   ├── use-simulator-state.ts  # All simulator state management
+│   │   ├── hosts.ts          # HostShell interface + registry
+│   │   ├── mcp-app-host.ts   # MCP Apps bridge wrapper (generic)
+│   │   ├── iframe-resource.tsx  # Iframe rendering + CSP (generic)
+│   │   ├── simple-sidebar.tsx   # Dev control panel
+│   │   └── theme-provider.tsx   # Pluggable theme provider
+│   ├── chatgpt/              # ChatGPT host shell
+│   │   ├── chatgpt-conversation.tsx  # ChatGPT conversation chrome
+│   │   └── chatgpt-host.ts   # Host registration (theme, capabilities)
+│   ├── claude/               # Claude host shell
+│   │   ├── claude-conversation.tsx   # Claude conversation chrome
+│   │   └── claude-host.ts    # Host registration (theme, capabilities)
 │   ├── hooks/                # React hooks (useApp, useHostContext, useToolData, etc.)
 │   ├── mcp/                  # MCP server (runMCPServer, resource registration)
 │   ├── platform/             # Platform detection (detectPlatform, isChatGPT, isClaude)
@@ -52,8 +74,10 @@ packages/sunpeak/
 ```
 
 ### Export Map (`sunpeak`)
-- `sunpeak` — Hooks, types, SDK re-exports
-- `sunpeak/chatgpt` — Simulator, IframeResource, McpAppHost, simulation utilities
+- `sunpeak` — Hooks, types, SDK re-exports, `simulator` + `chatgpt` namespaces
+- `sunpeak/simulator` — Generic Simulator, host shell system, infrastructure
+- `sunpeak/chatgpt` — ChatGPTSimulator (backwards compat alias), ChatGPT shell
+- `sunpeak/claude` — ClaudeSimulator alias, Claude shell
 - `sunpeak/mcp` — Server utilities
 - `sunpeak/platform` — Platform detection
 - `sunpeak/platform/chatgpt` — ChatGPT-specific hooks (file upload, modals, checkout)
@@ -71,6 +95,15 @@ interface Simulation {
   resource: Resource;
   toolInput?: Record<string, unknown>;
   toolResult?: { content?: [...]; structuredContent?: unknown };
+}
+
+interface HostShell {
+  id: string;                              // 'chatgpt' | 'claude'
+  label: string;                           // Display name in sidebar
+  Conversation: ComponentType<HostConversationProps>;
+  applyTheme: (theme: 'light' | 'dark') => void;
+  hostInfo: { name: string; version: string };
+  hostCapabilities: McpUiHostCapabilities;
 }
 ```
 

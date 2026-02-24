@@ -1,5 +1,4 @@
 import * as React from 'react';
-import { applyDocumentTheme } from '@openai/apps-sdk-ui/theme';
 
 type Theme = 'light' | 'dark';
 
@@ -7,6 +6,8 @@ type ThemeProviderProps = {
   children: React.ReactNode;
   defaultTheme?: Theme;
   theme?: Theme;
+  /** Custom theme applier. If not provided, falls back to setting data-theme attribute. */
+  applyTheme?: (theme: Theme) => void;
 };
 
 type ThemeProviderState = {
@@ -15,27 +16,35 @@ type ThemeProviderState = {
 
 const ThemeProviderContext = React.createContext<ThemeProviderState | undefined>(undefined);
 
+/** Default theme applier: sets data-theme attribute on document.documentElement */
+function defaultApplyTheme(theme: Theme): void {
+  if (typeof document !== 'undefined') {
+    document.documentElement.setAttribute('data-theme', theme);
+  }
+}
+
 export function ThemeProvider({
   children,
   defaultTheme = 'light',
   theme: controlledTheme,
+  applyTheme,
   ...props
 }: ThemeProviderProps) {
   const [internalTheme] = React.useState<Theme>(defaultTheme);
 
   const theme = controlledTheme ?? internalTheme;
+  const applier = applyTheme ?? defaultApplyTheme;
 
   // Apply theme synchronously before paint to avoid FOUC
   React.useLayoutEffect(() => {
-    // Only apply if we're in a browser environment
     if (typeof window !== 'undefined' && typeof document !== 'undefined') {
       try {
-        applyDocumentTheme(theme);
+        applier(theme);
       } catch (error) {
         console.warn('Failed to apply document theme:', error);
       }
     }
-  }, [theme]);
+  }, [theme, applier]);
 
   const value = {
     theme,

@@ -1,7 +1,7 @@
 /// <reference types="vite/client" />
 /**
  * Bootstrap file for Sunpeak dev server
- * This file bootstraps the ChatGPT simulator for development
+ * This file bootstraps the multi-host simulator for development.
  *
  * Auto-discovers simulations and resources by file naming convention:
  * - tests/simulations/{resource}/{resource}-{scenario}-simulation.json
@@ -10,11 +10,11 @@
  */
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { chatgpt } from 'sunpeak';
+import { simulator } from 'sunpeak';
 import '../src/styles/globals.css';
 import resourceComponents from '../src/resources';
 
-const { ChatGPTSimulator, buildDevSimulations } = chatgpt;
+const { Simulator, buildDevSimulations } = simulator;
 
 // Build simulations from discovered files
 const simulations = buildDevSimulations({
@@ -34,7 +34,7 @@ if (import.meta.hot) import.meta.hot.data.root = root;
 
 root.render(
   <StrictMode>
-    <ChatGPTSimulator simulations={simulations} appName={appName} appIcon={appIcon} />
+    <Simulator simulations={simulations} appName={appName} appIcon={appIcon} />
   </StrictMode>
 );
 

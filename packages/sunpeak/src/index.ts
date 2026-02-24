@@ -1,4 +1,4 @@
-import './chatgpt/globals.css';
+import './simulator/globals.css';
 
 // === MCP Apps SDK re-exports ===
 // Re-export commonly used SDK exports for convenience
@@ -22,8 +22,12 @@ export * from './lib';
 export { isChatGPT, isClaude, detectPlatform } from './platform';
 export type { Platform } from './platform';
 
-// === ChatGPT-specific exports (namespaced) ===
-// These are for the ChatGPT simulator and ChatGPT-specific development tools.
+// === Generic simulator (multi-host) ===
+// Import as: import { simulator } from 'sunpeak';
+// Usage: <simulator.Simulator ... />
+export * as simulator from './simulator';
+
+// === ChatGPT-specific exports (namespaced, backwards compatible) ===
 // Import as: import { chatgpt } from 'sunpeak';
 // Usage: <chatgpt.ChatGPTSimulator ... />
 export * as chatgpt from './chatgpt';

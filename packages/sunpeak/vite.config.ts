@@ -19,18 +19,22 @@ export default defineConfig({
       outDir: 'dist',
       rollupTypes: false,
     }),
-    // Merge Tailwind setup + bundled component styles into single CSS file
+    // Merge Tailwind setup + bundled component styles into CSS files for each entry
     {
-      name: 'merge-chatgpt-css',
+      name: 'merge-simulator-css',
       closeBundle() {
-        mkdirSync(resolve(__dirname, 'dist/chatgpt'), { recursive: true });
-        // Read Tailwind setup (directives processed by consuming app)
-        const globalsCss = readFileSync(resolve(__dirname, 'src/chatgpt/globals.css'), 'utf-8');
         // Read pre-compiled component styles (CSS modules from SDK)
         const styleCss = readFileSync(resolve(__dirname, 'dist/style.css'), 'utf-8');
-        // Merge into single file
-        const merged = `${globalsCss}\n/* Bundled component styles */\n${styleCss}`;
-        writeFileSync(resolve(__dirname, 'dist/chatgpt/globals.css'), merged);
+
+        // Read the base simulator CSS (Tailwind config + utilities)
+        const simulatorCss = readFileSync(resolve(__dirname, 'src/simulator/globals.css'), 'utf-8');
+
+        // chatgpt/globals.css — backwards compatibility
+        mkdirSync(resolve(__dirname, 'dist/chatgpt'), { recursive: true });
+        writeFileSync(
+          resolve(__dirname, 'dist/chatgpt/globals.css'),
+          `${simulatorCss}\n/* Bundled component styles */\n${styleCss}`
+        );
       },
     },
   ],
@@ -38,7 +42,9 @@ export default defineConfig({
     lib: {
       entry: {
         index: resolve(__dirname, 'src/index.ts'),
+        'simulator/index': resolve(__dirname, 'src/simulator/index.ts'),
         'chatgpt/index': resolve(__dirname, 'src/chatgpt/index.ts'),
+        'claude/index': resolve(__dirname, 'src/claude/index.ts'),
         'lib/discovery-cli': resolve(__dirname, 'src/lib/discovery-cli.ts'),
         'mcp/index': resolve(__dirname, 'src/mcp/index.ts'),
         'platform/index': resolve(__dirname, 'src/platform/index.ts'),

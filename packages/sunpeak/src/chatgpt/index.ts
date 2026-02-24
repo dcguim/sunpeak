@@ -22,28 +22,34 @@
  * @module sunpeak/chatgpt
  */
 
-// Simulator component
+// Register ChatGPT host shell (side effect)
+import './chatgpt-host';
+
+// Legacy simulator component (kept for backwards compatibility)
 export { ChatGPTSimulator } from './chatgpt-simulator';
+
+// Generic simulator (preferred)
+export { Simulator } from '../simulator/simulator';
 
 // Simulator types
 export type { Simulation } from '../types/simulation';
-export type { ScreenWidth, SimulatorConfig } from './chatgpt-simulator-types';
-export { SCREEN_WIDTHS } from './chatgpt-simulator-types';
+export type { ScreenWidth, SimulatorConfig } from '../simulator/simulator-types';
+export { SCREEN_WIDTHS } from '../simulator/simulator-types';
 
 // Host bridge (for building custom simulators or test harnesses)
-export { McpAppHost } from './mcp-app-host';
-export type { McpAppHostOptions } from './mcp-app-host';
+export { McpAppHost } from '../simulator/mcp-app-host';
+export type { McpAppHostOptions } from '../simulator/mcp-app-host';
 
 // Iframe rendering (used internally by simulator)
-export { IframeResource, extractResourceCSP } from './iframe-resource';
-export type { ResourceCSP } from './iframe-resource';
+export { IframeResource, extractResourceCSP } from '../simulator/iframe-resource';
+export type { ResourceCSP } from '../simulator/iframe-resource';
 
 // Theme provider
-export * from './theme-provider';
+export * from '../simulator/theme-provider';
 
 // URL helpers
-export { createSimulatorUrl } from './simulator-url';
-export type { SimulatorUrlParams } from './simulator-url';
+export { createSimulatorUrl } from '../simulator/simulator-url';
+export type { SimulatorUrlParams } from '../simulator/simulator-url';
 
 // Discovery utilities for building simulations
 export {

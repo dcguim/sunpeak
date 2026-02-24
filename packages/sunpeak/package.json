@@ -17,10 +17,22 @@
         "default": "./dist/index.cjs"
       }
     },
+    "./simulator": {
+      "import": {
+        "types": "./dist/simulator/index.d.ts",
+        "default": "./dist/simulator/index.js"
+      }
+    },
     "./chatgpt": {
       "import": {
         "types": "./dist/chatgpt/index.d.ts",
         "default": "./dist/chatgpt/index.js"
+      }
+    },
+    "./claude": {
+      "import": {
+        "types": "./dist/claude/index.d.ts",
+        "default": "./dist/claude/index.js"
       }
     },
     "./style.css": "./dist/style.css",
@@ -55,7 +67,9 @@
     "README.md"
   ],
   "sideEffects": [
-    "**/*.css"
+    "**/*.css",
+    "**/chatgpt-host.*",
+    "**/claude-host.*"
   ],
   "scripts": {
     "build": "vite build",
@@ -75,6 +89,8 @@
     "mcp-ui",
     "mcp",
     "chatgpt-simulator",
+    "claude",
+    "claude-simulator",
     "testing",
     "multi-platform",
     "react",

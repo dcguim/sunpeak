@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { CloseBold } from '@openai/apps-sdk-ui/components/Icon';
-import { SCREEN_WIDTHS, type ScreenWidth } from './chatgpt-simulator-types';
+import { SCREEN_WIDTHS, type ScreenWidth } from '../simulator/simulator-types';
 import type { McpUiDisplayMode, McpUiHostContext } from '@modelcontextprotocol/ext-apps';
 
 type Platform = NonNullable<McpUiHostContext['platform']>;

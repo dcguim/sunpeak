@@ -15,9 +15,9 @@ import type {
   LoggingMessageNotification,
 } from '@modelcontextprotocol/sdk/types.js';
 
-const HOST_INFO = { name: 'SunpeakSimulator', version: '1.0.0' };
+const DEFAULT_HOST_INFO = { name: 'SunpeakSimulator', version: '1.0.0' };
 
-const HOST_CAPABILITIES: McpUiHostCapabilities = {
+const DEFAULT_HOST_CAPABILITIES: McpUiHostCapabilities = {
   openLinks: {},
   serverTools: {},
   logging: {},
@@ -27,6 +27,10 @@ const HOST_CAPABILITIES: McpUiHostCapabilities = {
 
 export interface McpAppHostOptions {
   hostContext?: McpUiHostContext;
+  /** Host info reported to the app via MCP protocol. Defaults to SunpeakSimulator. */
+  hostInfo?: { name: string; version: string };
+  /** Host capabilities reported to the app. Defaults to baseline MCP capabilities. */
+  hostCapabilities?: McpUiHostCapabilities;
   onDisplayModeChange?: (mode: McpUiDisplayMode) => void;
   onMessage?: (role: string, content: unknown[]) => void;
   onOpenLink?: (url: string) => void;
@@ -58,7 +62,9 @@ export class McpAppHost {
     this.options = options;
     this._prevDisplayMode = options.hostContext?.displayMode;
 
-    this.bridge = new AppBridge(null, HOST_INFO, HOST_CAPABILITIES, {
+    const hostInfo = options.hostInfo ?? DEFAULT_HOST_INFO;
+    const hostCapabilities = options.hostCapabilities ?? DEFAULT_HOST_CAPABILITIES;
+    this.bridge = new AppBridge(null, hostInfo, hostCapabilities, {
       hostContext: options.hostContext,
     });
 

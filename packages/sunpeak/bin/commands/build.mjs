@@ -261,7 +261,7 @@ export async function build(projectRoot = process.cwd()) {
         },
       });
     } catch (error) {
-      console.error(`Failed to build ${output}`);
+      console.error(`Failed to build ${kebabName}`);
       console.error(error);
       process.exit(1);
     }
