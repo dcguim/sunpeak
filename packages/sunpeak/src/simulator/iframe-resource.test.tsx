@@ -101,16 +101,13 @@ describe('IframeResource', () => {
     expect(srcDoc).toContain('data-theme="dark"');
   });
 
-  it('uses var(--color-surface) for background instead of transparent', () => {
+  it('uses transparent background (app applies its own via host style variables)', () => {
     render(<IframeResource scriptSrc="/dist/carousel/carousel.js" />);
 
     const iframe = screen.getByTitle('Resource Preview') as HTMLIFrameElement;
     const srcDoc = iframe.getAttribute('srcDoc') ?? '';
 
-    // Platform-agnostic surface token — adapts to whatever the host's CSS defines.
-    // Prevents the browser's dark Canvas from showing through when color-scheme: dark
-    // is active, which can appear darker than the simulator surface.
-    expect(srcDoc).toContain('background-color: var(--color-surface)');
+    expect(srcDoc).toContain('background: transparent');
   });
 
   it('sets color-scheme before resource script loads', () => {
@@ -396,17 +393,6 @@ describe('IframeResource Security', () => {
       expect(csp).toContain('https://events.mapbox.com');
     });
 
-    it('always includes SDK resource domains (cdn.openai.com)', () => {
-      const csp = generateCSP(
-        undefined,
-        'https://sunpeak-prod-app-storage.s3.us-east-2.amazonaws.com/widget.js'
-      );
-
-      expect(csp).toContain('https://cdn.openai.com');
-      expect(csp).toContain('font-src');
-      expect(csp).toContain('img-src');
-    });
-
     it('adds custom resource domains to img-src and font-src', () => {
       const csp = generateCSP(
         {
@@ -417,7 +403,6 @@ describe('IframeResource Security', () => {
 
       expect(csp).toContain('img-src');
       expect(csp).toContain('https://cdn.sunpeak.ai');
-      expect(csp).toContain('https://cdn.openai.com');
       expect(csp).toContain('font-src');
     });
 
@@ -511,7 +496,7 @@ describe('IframeResource Security', () => {
     it('allows valid http(s) URLs', () => {
       expect(isValidCspSource('https://api.example.com')).toBe(true);
       expect(isValidCspSource('http://localhost:3000')).toBe(true);
-      expect(isValidCspSource('https://cdn.openai.com')).toBe(true);
+      expect(isValidCspSource('https://cdn.example.com')).toBe(true);
     });
 
     it('allows WebSocket URLs', () => {

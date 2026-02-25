@@ -1,6 +1,6 @@
 {
   "name": "sunpeak",
-  "version": "0.14.3",
+  "version": "0.15.0",
   "description": "Local-first MCP Apps framework. Quickstart, build, test, and ship your Claude or ChatGPT App!",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -100,7 +100,6 @@
   "author": "Sunpeak AI",
   "license": "MIT",
   "peerDependencies": {
-    "@openai/apps-sdk-ui": "^0.2.1",
     "react": "^18.0.0 || ^19.0.0",
     "react-dom": "^18.0.0 || ^19.0.0"
   },

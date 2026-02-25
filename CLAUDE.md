@@ -82,7 +82,7 @@ packages/sunpeak/
 - `sunpeak/platform` — Platform detection
 - `sunpeak/platform/chatgpt` — ChatGPT-specific hooks (file upload, modals, checkout)
 - `sunpeak/style.css` — Main stylesheet
-- `sunpeak/chatgpt/globals.css` — ChatGPT theme variables
+- `sunpeak/chatgpt/globals.css` — Simulator globals stylesheet
 
 ## Key Types
 
@@ -110,6 +110,6 @@ interface HostShell {
 ## Conventions
 - pnpm workspace with packages at `packages/*` and `packages/sunpeak/template`
 - ESM-first (`"type": "module"`)
-- Tailwind CSS with semantic tokens (`text-primary`, `bg-surface`, `border-subtle`)
+- Tailwind CSS with MCP standard variables via arbitrary values (`text-[var(--color-text-primary)]`, `bg-[var(--color-background-primary)]`, `border-[var(--color-border-primary)]`)
 - Simulation files discovered by convention: `*-simulation.json` or `simulations/*.json`
 - Resources discovered by convention from `src/resources/` directory

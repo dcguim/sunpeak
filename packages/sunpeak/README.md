@@ -51,9 +51,9 @@ To add `sunpeak` to an existing project, refer to the [documentation](https://do
 
 ### The `sunpeak` library
 
-1. Runtime APIs: Strongly typed React hooks for interacting with the host runtime (`useApp`, `useToolData`, `useAppState`, `useHostContext`), architected to **support generic and platforms-specific features** (ChatGPT, Claude, etc.).
-2. ChatGPT simulator: React component replicating ChatGPT's runtime to **test Apps locally and automatically** via UI, props, or URL parameters.
-3. MCP server: Serve Resources with mock data to the real ChatGPT with HMR (**no more cache issues or 5-click manual refreshes**).
+1. Runtime APIs: Strongly typed React hooks for interacting with the host runtime (`useApp`, `useToolData`, `useAppState`, `useHostContext`), architected to **support generic and platform-specific features** (ChatGPT, Claude, etc.).
+2. Multi-host simulator: React component replicating host runtimes (ChatGPT, Claude) to **test Apps locally and automatically** via UI, props, or URL parameters.
+3. MCP server: Serve Resources with mock data to hosts like ChatGPT and Claude with HMR (**no more cache issues or 5-click manual refreshes**).
 
 ### The `sunpeak` framework
 
@@ -72,10 +72,10 @@ my-app/
 ```
 
 1. Project scaffold: Complete development setup with the `sunpeak` library.
-2. UI components: Production-ready components following ChatGPT design guidelines.
+2. UI components: Production-ready components following MCP App design guidelines.
 3. Convention over configuration:
    1. Create a UI by creating a `-resource.tsx` file that exports a `ResourceConfig` and a React component ([example below](#resource-component)).
-   2. Create test state (`Simulation`s) for local dev, ChatGPT dev, automated testing, and demos by creating a `-simulation.json` file. ([example below](#simulation))
+   2. Create test state (`Simulation`s) for local dev, host dev, automated testing, and demos by creating a `-simulation.json` file. ([example below](#simulation))
 
 ### The `sunpeak` CLI
 
@@ -88,7 +88,7 @@ Commands for managing MCP Apps:
 
 ## Example App
 
-Example `Resource`, `Simulation`, and testing file (using `ChatGPTSimulator`) for an MCP resource called "Review".
+Example `Resource`, `Simulation`, and testing file (using the `Simulator`) for an MCP resource called "Review".
 
 ### `Resource` Component
 
@@ -110,7 +110,7 @@ import type { ResourceConfig } from 'sunpeak';
 export const resource: ResourceConfig = {
   name: 'review',
   description: 'Visualize and review a code change',
-  _meta: { ui: { csp: { resourceDomains: ['https://cdn.openai.com'] } } },
+  _meta: { ui: { csp: { resourceDomains: ['https://cdn.example.com'] } } },
 };
 
 export function ReviewResource() {
@@ -165,7 +165,7 @@ Testing an MCP App requires setting a lot of state: state in your **backend**, *
 }
 ```
 
-### `ChatGPTSimulator`
+### `Simulator`
 
 ```bash
 ├── tests/e2e/
@@ -173,9 +173,9 @@ Testing an MCP App requires setting a lot of state: state in your **backend**, *
 └── package.json
 ```
 
-The `ChatGPTSimulator` allows you to set **host state** (like light/dark mode) via URL params, which can be rendered alongside your `Simulation`s and tested via pre-configured Playwright end-to-end tests (`.spec.ts`).
+The `Simulator` allows you to set **host state** (like host platform, light/dark mode) via URL params, which can be rendered alongside your `Simulation`s and tested via pre-configured Playwright end-to-end tests (`.spec.ts`).
 
-Using the `ChatGPTSimulator` and `Simulation`s, you can test all possible App states locally and automatically!
+Using the `Simulator` and `Simulation`s, you can test all possible App states locally and automatically across hosts (ChatGPT, Claude)!
 
 ```ts
 // tests/e2e/review.spec.ts
@@ -183,11 +183,14 @@ Using the `ChatGPTSimulator` and `Simulation`s, you can test all possible App st
 import { test, expect } from '@playwright/test';
 import { createSimulatorUrl } from 'sunpeak/chatgpt';
 
-test.describe('Review Resource', () => {
-  test.describe('Light Mode', () => {
-    test('should render review title with correct styles', async ({ page }) => {
-      const params = { simulation: 'review-diff', theme: 'light' }; // Set sim & host state.
-      await page.goto(createSimulatorUrl(params));
+const hosts = ['chatgpt', 'claude'] as const;
+
+for (const host of hosts) {
+  test.describe(`Review Resource [${host}]`, () => {
+    test.describe('Light Mode', () => {
+      test('should render review title with correct styles', async ({ page }) => {
+        const params = { simulation: 'review-diff', theme: 'light', host }; // Set sim & host state.
+        await page.goto(createSimulatorUrl(params));
 
       // Resource content renders inside an iframe
       const iframe = page.frameLocator('iframe');
@@ -196,11 +199,12 @@ test.describe('Review Resource', () => {
 
       const color = await title.evaluate((el) => window.getComputedStyle(el).color);
 
-      // Light mode should render dark text.
-      expect(color).toBe('rgb(13, 13, 13)');
+        // Light mode should render dark text.
+        expect(color).toBe('rgb(13, 13, 13)');
+      });
     });
   });
-});
+}
 ```
 
 ## Coding Agent Skill
@@ -214,5 +218,5 @@ npx skills add Sunpeak-AI/sunpeak@create-sunpeak-app
 ## Resources
 
 - [MCP Apps](https://github.com/modelcontextprotocol/ext-apps)
-- [ChatGPT Apps SDK Design Guidelines](https://developers.openai.com/apps-sdk/concepts/design-guidelines)
-- [ChatGPT Apps SDK Documentation - UI](https://developers.openai.com/apps-sdk/build/chatgpt-ui)
+- [MCP Apps SDK Design Guidelines](https://developers.openai.com/apps-sdk/concepts/design-guidelines)
+- [MCP Apps SDK Documentation - UI](https://developers.openai.com/apps-sdk/build/chatgpt-ui)

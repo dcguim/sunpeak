@@ -3,7 +3,7 @@ import { URL } from 'node:url';
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { FAVICON_BUFFER } from './favicon.js';
+import { FAVICON_BASE64, FAVICON_BUFFER } from './favicon.js';
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
@@ -16,6 +16,26 @@ import {
 import { type MCPServerConfig, type SimulationWithDist } from './types.js';
 
 export type { MCPServerConfig, SimulationWithDist } from './types.js';
+
+// Dev server URLs for Vite HMR (localhost only — used for direct connections like ChatGPT)
+const LOCAL_DEV_SERVER_URL = 'http://localhost:8000';
+const LOCAL_HMR_WS_URL = 'ws://localhost:24678';
+
+/**
+ * Detect whether this request needs pre-built HTML (no Vite HMR).
+ *
+ * Claude's iframe sandbox blocks HTTP script sources, so it can't load from the
+ * local Vite dev server. We detect Claude by its user-agent and serve the
+ * self-contained production build instead.
+ *
+ * ChatGPT also connects through tunnels but its browser can reach localhost via
+ * the local-network-access permission, so it gets Vite HMR.
+ */
+function needsProdBuild(headers: Record<string, string | string[] | undefined>): boolean {
+  const ua = headers['user-agent'];
+  const userAgent = typeof ua === 'string' ? ua : Array.isArray(ua) ? ua[0] : '';
+  return /claude/i.test(userAgent ?? '');
+}
 
 /**
  * Read pre-built resource HTML (production mode).
@@ -34,13 +54,8 @@ function readResourceHtmlProd(distPath: string): string {
 }
 
 /**
- * Generate HTML that loads from Vite dev server (dev mode with HMR).
- *
- * - Scripts load from localhost (not ngrok) to bypass ngrok warning page
- * - User must approve "local network access" in browser to allow localhost access
- * - HMR WebSocket connects to localhost
- *
- * @param srcPath - Path to the source file (e.g., "/src/resources/albums/albums-resource.tsx")
+ * Generate HTML that loads from Vite dev server with HMR.
+ * Used for direct connections (e.g. ChatGPT connecting to localhost).
  */
 function getViteResourceHtml(srcPath: string): string {
   // Extract component name from path: /src/resources/albums/albums-resource.tsx -> AlbumsResource
@@ -55,9 +70,7 @@ function getViteResourceHtml(srcPath: string): string {
       .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
       .join('') + 'Resource';
 
-  // Use localhost URL for dev (not ngrok URL) to bypass ngrok warning page
-  // Scripts load directly from localhost, user must approve "local network access" in browser
-  const devServerUrl = 'http://localhost:8000';
+  const devServerUrl = LOCAL_DEV_SERVER_URL;
 
   // Encode srcPath and componentName for the virtual entry module
   const entryParams = new URLSearchParams({ src: srcPath, component: componentName });
@@ -102,22 +115,26 @@ function getViteResourceHtml(srcPath: string): string {
 }
 
 /**
- * Get resource HTML content based on mode (Vite dev or production)
+ * Get resource HTML content.
+ *
+ * - Direct connections (ChatGPT): Vite dev server HTML with HMR
+ * - Tunnel connections (Claude via ngrok): Pre-built HTML with everything inlined
+ * - Production mode (--prod-mcp): Pre-built HTML always
  */
-function getResourceHtml(simulation: SimulationWithDist, viteMode: boolean): string {
-  if (viteMode && simulation.srcPath) {
+function getResourceHtml(
+  simulation: SimulationWithDist,
+  viteMode: boolean,
+  prodBuild: boolean
+): string {
+  if (viteMode && simulation.srcPath && !prodBuild) {
     return getViteResourceHtml(simulation.srcPath);
   }
   return readResourceHtmlProd(simulation.distPath);
 }
 
-// Vite dev server URLs for CSP
-const DEV_SERVER_URL = 'http://localhost:8000';
-const HMR_WS_URL = 'ws://localhost:24678';
-
 /**
- * Inject localhost URLs into CSP for Vite dev mode.
- * Uses MCP Apps metadata format: _meta.ui.csp.resourceDomains/connectDomains
+ * Inject localhost Vite dev server URLs into CSP metadata.
+ * Only needed for direct connections where the iframe loads scripts from localhost.
  */
 function injectViteCSP(existingMeta: Record<string, unknown> | undefined): Record<string, unknown> {
   const meta = existingMeta ?? {};
@@ -125,24 +142,20 @@ function injectViteCSP(existingMeta: Record<string, unknown> | undefined): Recor
   const csp = (ui.csp as Record<string, unknown>) ?? {};
 
   const existingResourceDomains = (csp.resourceDomains as string[]) ?? [];
-  const resourceDomains = existingResourceDomains.includes(DEV_SERVER_URL)
+  const resourceDomains = existingResourceDomains.includes(LOCAL_DEV_SERVER_URL)
     ? existingResourceDomains
-    : [...existingResourceDomains, DEV_SERVER_URL];
+    : [...existingResourceDomains, LOCAL_DEV_SERVER_URL];
 
   const existingConnectDomains = (csp.connectDomains as string[]) ?? [];
-  const connectDomains = existingConnectDomains.includes(HMR_WS_URL)
-    ? existingConnectDomains
-    : [...existingConnectDomains, HMR_WS_URL];
+  const connectDomains = [...existingConnectDomains];
+  if (!connectDomains.includes(LOCAL_DEV_SERVER_URL)) connectDomains.push(LOCAL_DEV_SERVER_URL);
+  if (!connectDomains.includes(LOCAL_HMR_WS_URL)) connectDomains.push(LOCAL_HMR_WS_URL);
 
   return {
     ...meta,
     ui: {
       ...ui,
-      csp: {
-        ...csp,
-        resourceDomains,
-        connectDomains,
-      },
+      csp: { ...csp, resourceDomains, connectDomains },
     },
   };
 }
@@ -155,7 +168,17 @@ function createAppServer(
   const { name = 'sunpeak-app', version = '0.1.0' } = config;
 
   const mcpServer = new McpServer(
-    { name, version },
+    {
+      name,
+      version,
+      icons: [
+        {
+          src: `data:image/png;base64,${FAVICON_BASE64}`,
+          mimeType: 'image/png',
+          sizes: ['128x128'],
+        },
+      ],
+    },
     { capabilities: { resources: {}, tools: {} } }
   );
 
@@ -180,25 +203,35 @@ function createAppServer(
     // This sets RESOURCE_MIME_TYPE automatically
     if (!registeredResources.has(uri)) {
       registeredResources.add(uri);
+      const listMeta = viteMode ? injectViteCSP(resourceMeta) : resourceMeta;
+      console.log(`[MCP] RegisterResource: ${uri}`);
       registerAppResource(
         mcpServer,
         resource.name as string,
         uri,
         {
           description: resource.description as string | undefined,
-          _meta: viteMode ? { ui: injectViteCSP(resourceMeta)?.ui } : resourceMeta,
+          _meta: listMeta,
         },
-        async () => {
-          console.log(`[MCP] ReadResource: ${uri}${viteMode ? ' (vite)' : ''}`);
+        async (_uri, extra) => {
+          // Claude's sandbox blocks HTTP script sources, so serve pre-built HTML.
+          // ChatGPT can reach localhost, so it gets Vite HMR.
+          const prodBuild = needsProdBuild(
+            (extra?.requestInfo?.headers as Record<string, string | string[] | undefined>) ?? {}
+          );
+          const readMeta = viteMode && !prodBuild ? injectViteCSP(resourceMeta) : resourceMeta;
+
           let content: string;
           try {
-            content = getResourceHtml(simulation, viteMode);
+            content = getResourceHtml(simulation, viteMode, prodBuild);
           } catch (error) {
             console.error(`[MCP] ReadResource error for ${uri}:`, error);
             throw error;
           }
           const sizeKB = (content.length / 1024).toFixed(1);
-          console.log(`[MCP] ReadResource: ${uri} → ${sizeKB}KB`);
+          console.log(
+            `[MCP] ReadResource: ${uri} → ${sizeKB}KB${prodBuild ? ' (prod build)' : ' (vite)'}`
+          );
 
           return {
             contents: [
@@ -206,7 +239,7 @@ function createAppServer(
                 uri,
                 mimeType: RESOURCE_MIME_TYPE,
                 text: content,
-                _meta: viteMode ? injectViteCSP(resourceMeta) : resourceMeta,
+                _meta: readMeta,
               },
             ],
           };

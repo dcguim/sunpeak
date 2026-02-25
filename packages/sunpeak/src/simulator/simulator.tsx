@@ -1,5 +1,9 @@
 import * as React from 'react';
-import type { McpUiDisplayMode, McpUiTheme } from '@modelcontextprotocol/ext-apps';
+import type {
+  McpUiDisplayMode,
+  McpUiTheme,
+  McpUiHostContext,
+} from '@modelcontextprotocol/ext-apps';
 import { useSimulatorState } from './use-simulator-state';
 import { IframeResource } from './iframe-resource';
 import { ThemeProvider } from './theme-provider';
@@ -42,13 +46,37 @@ export function Simulator({
   const registeredHosts = getRegisteredHosts();
   const ShellConversation = activeShell?.Conversation;
 
+  // Merge host style variables into the hostContext (standard MCP App theming).
+  // Style variables use CSS light-dark() so they don't depend on theme —
+  // the app handles theme via color-scheme set by applyDocumentTheme().
+  const hostContext = React.useMemo(() => {
+    const styleVars = activeShell?.styleVariables;
+    if (!styleVars) return state.hostContext;
+    return {
+      ...state.hostContext,
+      styles: { variables: styleVars },
+    } as McpUiHostContext;
+  }, [state.hostContext, activeShell]);
+
+  // Apply host style variables to the document root so the simulator chrome
+  // (sidebar, conversation shells) can use them via var(--color-*).
+  // These are the same MCP standard variables sent to the iframe.
+  React.useEffect(() => {
+    const vars = activeShell?.styleVariables;
+    if (!vars) return;
+    const root = document.documentElement;
+    for (const [key, value] of Object.entries(vars)) {
+      if (value) root.style.setProperty(key, value);
+    }
+  }, [activeShell]);
+
   // Build content
   let content: React.ReactNode;
   if (state.resourceUrl) {
     content = (
       <IframeResource
         src={state.resourceUrl}
-        hostContext={state.hostContext}
+        hostContext={hostContext}
         toolInput={state.toolInput}
         toolResult={state.effectiveToolResult}
         hostOptions={{
@@ -66,7 +94,7 @@ export function Simulator({
     content = (
       <IframeResource
         scriptSrc={state.resourceScript}
-        hostContext={state.hostContext}
+        hostContext={hostContext}
         toolInput={state.toolInput}
         toolResult={state.effectiveToolResult}
         csp={state.csp}
@@ -238,7 +266,12 @@ export function Simulator({
                 <SidebarControl label="Safe Area Insets">
                   <div className="grid grid-cols-4 gap-1">
                     <div className="flex items-center gap-0.5">
-                      <span className="text-[10px] text-secondary">&uarr;</span>
+                      <span
+                        className="text-[10px]"
+                        style={{ color: 'var(--color-text-secondary)' }}
+                      >
+                        &uarr;
+                      </span>
                       <SidebarInput
                         type="number"
                         value={String(state.safeAreaInsets.top)}
@@ -248,7 +281,12 @@ export function Simulator({
                       />
                     </div>
                     <div className="flex items-center gap-0.5">
-                      <span className="text-[10px] text-secondary">&darr;</span>
+                      <span
+                        className="text-[10px]"
+                        style={{ color: 'var(--color-text-secondary)' }}
+                      >
+                        &darr;
+                      </span>
                       <SidebarInput
                         type="number"
                         value={String(state.safeAreaInsets.bottom)}
@@ -258,7 +296,12 @@ export function Simulator({
                       />
                     </div>
                     <div className="flex items-center gap-0.5">
-                      <span className="text-[10px] text-secondary">&larr;</span>
+                      <span
+                        className="text-[10px]"
+                        style={{ color: 'var(--color-text-secondary)' }}
+                      >
+                        &larr;
+                      </span>
                       <SidebarInput
                         type="number"
                         value={String(state.safeAreaInsets.left)}
@@ -268,7 +311,12 @@ export function Simulator({
                       />
                     </div>
                     <div className="flex items-center gap-0.5">
-                      <span className="text-[10px] text-secondary">&rarr;</span>
+                      <span
+                        className="text-[10px]"
+                        style={{ color: 'var(--color-text-secondary)' }}
+                      >
+                        &rarr;
+                      </span>
                       <SidebarInput
                         type="number"
                         value={String(state.safeAreaInsets.right)}

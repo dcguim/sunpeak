@@ -1,9 +1,20 @@
 import * as React from 'react';
-import { CloseBold } from '@openai/apps-sdk-ui/components/Icon';
 import { SCREEN_WIDTHS, type ScreenWidth } from '../simulator/simulator-types';
 import type { McpUiDisplayMode, McpUiHostContext } from '@modelcontextprotocol/ext-apps';
 
 type Platform = NonNullable<McpUiHostContext['platform']>;
+
+function CloseIcon({ className }: { className?: string }) {
+  return (
+    <svg width="1em" height="1em" viewBox="0 0 24 24" fill="currentColor" className={className}>
+      <path
+        fillRule="evenodd"
+        clipRule="evenodd"
+        d="M5.83071 5.83077C6.33839 5.32309 7.16151 5.32309 7.66919 5.83077L12 10.1615L16.3307 5.83077C16.8384 5.32309 17.6615 5.32309 18.1692 5.83077C18.6769 6.33845 18.6769 7.16157 18.1692 7.66925L13.8384 12L18.1692 16.3308C18.6769 16.8385 18.6769 17.6616 18.1692 18.1693C17.6615 18.6769 16.8384 18.6769 16.3307 18.1693L12 13.8385L7.66919 18.1693C7.16151 18.6769 6.33839 18.6769 5.83071 18.1693C5.32303 17.6616 5.32303 16.8385 5.83071 16.3308L10.1615 12L5.83071 7.66925C5.32303 7.16157 5.32303 6.33845 5.83071 5.83077Z"
+      />
+    </svg>
+  );
+}
 
 interface ConversationProps {
   children?: React.ReactNode;
@@ -55,38 +66,47 @@ export function Conversation({
 
   return (
     <div
-      className="flex flex-col bg-surface w-full h-full flex-1 items-center relative"
-      style={{ transform: 'translate(0)' }}
+      className="flex flex-col w-full h-full flex-1 items-center relative"
+      style={{
+        transform: 'translate(0)',
+        backgroundColor: 'var(--color-background-primary)',
+        color: 'var(--color-text-primary)',
+      }}
     >
       {/* ─── Fullscreen chrome overlay ─── */}
-      {/* Rendered as a fixed overlay above the content (z-[51] > z-50). */}
-      {/* pointer-events-none on container, pointer-events-auto on interactive parts. */}
       {isFullscreen && (
         <div
           className="fixed start-0 end-0 top-0 bottom-0 z-[51] mx-auto flex flex-col pointer-events-none"
           style={{ maxWidth: containerWidth }}
         >
-          <div className="border-subtle bg-token-bg-primary sm:bg-token-bg-primary z-10 grid h-[3.25rem] grid-cols-[1fr_auto_1fr] border-b px-2 pointer-events-auto">
+          <div
+            className="z-10 grid h-[3.25rem] grid-cols-[1fr_auto_1fr] border-b px-2 pointer-events-auto"
+            style={{
+              borderColor: 'var(--color-border-primary)',
+              backgroundColor: 'var(--color-background-primary)',
+            }}
+          >
             <div className="flex items-center justify-start gap-3">
               <button
                 onClick={handleClose}
                 aria-label="Close"
-                className="h-7 w-7 flex items-center justify-center hover:bg-subtle rounded-md transition-colors text-primary"
+                className="h-7 w-7 flex items-center justify-center rounded-md transition-colors hover:opacity-70"
                 type="button"
               >
-                <CloseBold />
+                <CloseIcon />
               </button>
             </div>
             {isDesktop && (
-              <div className="text-primary flex items-center justify-center text-base">
-                {appName}
-              </div>
+              <div className="flex items-center justify-center text-base">{appName}</div>
             )}
             {isDesktop && <div />}
           </div>
           {/* Spacer - pointer events pass through to content below */}
           <div className="flex-1" />
-          <footer className="bg-surface pointer-events-auto">
+          <footer
+            className="pointer-events-auto"
+            style={{ backgroundColor: 'var(--color-background-primary)' }}
+          >
             <div className="max-w-[48rem] mx-auto px-4 py-4">
               <div className="relative">
                 <input
@@ -94,7 +114,12 @@ export function Conversation({
                   name="userInput"
                   disabled
                   placeholder="Message sunpeak.ai"
-                  className="w-full dark:bg-[#303030] text-secondary-foreground placeholder:text-muted-foreground rounded-3xl px-5 py-3 pr-12 shadow-md light:border border-[#0000000f]"
+                  className="w-full rounded-3xl px-5 py-3 pr-12 shadow-md"
+                  style={{
+                    backgroundColor: 'var(--color-background-secondary)',
+                    color: 'var(--color-text-primary)',
+                    border: '1px solid var(--color-border-tertiary)',
+                  }}
                 />
               </div>
             </div>
@@ -103,13 +128,15 @@ export function Conversation({
       )}
 
       {/* ─── Conversation header ─── */}
-      {/* Hidden in fullscreen since the fullscreen chrome has its own header */}
       {!isFullscreen && (
         <header
-          className="h-12 bg-surface flex items-center px-4 text-lg sticky top-0 z-40 w-full"
-          style={{ maxWidth: containerWidth }}
+          className="h-12 flex items-center px-4 text-lg sticky top-0 z-40 w-full"
+          style={{
+            maxWidth: containerWidth,
+            backgroundColor: 'var(--color-background-primary)',
+          }}
         >
-          <span className="text-primary">sunpeak.ai</span>
+          <span>sunpeak.ai</span>
         </header>
       )}
 
@@ -121,7 +148,7 @@ export function Conversation({
         <main className="flex-1 overflow-y-auto overflow-x-hidden">
           {/* User turn - hidden in fullscreen */}
           {!isFullscreen && (
-            <article className="text-primary w-full focus:outline-none" dir="auto" data-turn="user">
+            <article className="w-full focus:outline-none" dir="auto" data-turn="user">
               <h5 className="sr-only">You said:</h5>
               <div className="text-base my-auto mx-auto md:pt-8 px-4">
                 <div className="max-w-[48rem] mx-auto flex-1 relative flex w-full min-w-0 flex-col">
@@ -131,7 +158,10 @@ export function Conversation({
                       className="min-h-8 relative flex w-full flex-col items-end gap-2 text-start break-words whitespace-normal"
                     >
                       <div className="flex w-full flex-col gap-1 empty:hidden items-end">
-                        <div className="bg-[var(--color-background-primary-soft)] relative rounded-[18px] px-4 py-3 max-w-[70%]">
+                        <div
+                          className="relative rounded-[18px] px-4 py-3 max-w-[70%]"
+                          style={{ backgroundColor: 'var(--color-background-tertiary)' }}
+                        >
                           <div className="whitespace-pre-wrap">{userMessage}</div>
                         </div>
                       </div>
@@ -143,11 +173,7 @@ export function Conversation({
           )}
 
           {/* Assistant turn */}
-          <article
-            className="text-primary w-full focus:outline-none"
-            dir="auto"
-            data-turn="assistant"
-          >
+          <article className="w-full focus:outline-none" dir="auto" data-turn="assistant">
             <h6 className="sr-only">{appName} said:</h6>
             <div className="text-base my-auto mx-auto pb-10 px-4">
               <div className="max-w-[48rem] mx-auto flex-1 relative flex w-full min-w-0 flex-col">
@@ -160,7 +186,10 @@ export function Conversation({
                           {appIcon}
                         </div>
                       ) : (
-                        <div className="size-6 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-medium text-xs">
+                        <div
+                          className="size-6 rounded-full flex items-center justify-center font-medium text-xs text-white"
+                          style={{ backgroundColor: '#10a37f' }}
+                        >
                           AI
                         </div>
                       )}
@@ -204,7 +233,7 @@ export function Conversation({
                             aria-label="Close picture-in-picture"
                             type="button"
                           >
-                            <CloseBold className="h-4 w-4" />
+                            <CloseIcon className="h-4 w-4" />
                           </button>
                         )}
                         <div
@@ -212,23 +241,24 @@ export function Conversation({
                           className={
                             isPip
                               ? 'relative overflow-hidden h-full rounded-2xl sm:rounded-3xl shadow-[0px_0px_0px_1px_#fff3,0px_6px_20px_rgba(0,0,0,0.1)] md:-mx-4'
-                              : isFullscreen
-                                ? 'relative overflow-hidden h-full'
-                                : 'relative overflow-hidden h-full'
+                              : 'relative overflow-hidden h-full'
                           }
                         >
                           <div
-                            className={
-                              isPip
-                                ? 'h-full w-full max-w-full overflow-auto bg-white dark:bg-[#212121]'
-                                : isFullscreen
-                                  ? 'h-full w-full max-w-full overflow-auto bg-surface'
-                                  : 'h-full w-full max-w-full bg-transparent'
-                            }
+                            className="h-full w-full max-w-full"
                             style={{
+                              ...(isPip
+                                ? {
+                                    overflow: 'auto',
+                                    backgroundColor: 'var(--color-background-primary)',
+                                  }
+                                : isFullscreen
+                                  ? {
+                                      overflow: 'auto',
+                                      backgroundColor: 'var(--color-background-primary)',
+                                    }
+                                  : { backgroundColor: 'transparent' }),
                               opacity: isTransitioning ? 0 : 1,
-                              // Only animate the reveal — the hide must be instant
-                              // to prevent old content from being visible in the new layout.
                               transition: isTransitioning ? 'none' : 'opacity 100ms',
                             }}
                           >
@@ -246,7 +276,7 @@ export function Conversation({
 
         {/* Input area - hidden in fullscreen since fullscreen chrome has its own footer */}
         {!isFullscreen && (
-          <footer className="bg-surface">
+          <footer style={{ backgroundColor: 'var(--color-background-primary)' }}>
             <div className="max-w-[48rem] mx-auto px-4 py-4">
               <div className="relative">
                 <input
@@ -254,7 +284,12 @@ export function Conversation({
                   name="userInput"
                   disabled
                   placeholder="Message sunpeak.ai"
-                  className="w-full dark:bg-[#303030] text-secondary-foreground placeholder:text-muted-foreground rounded-3xl px-5 py-3 pr-12 shadow-md light:border border-[#0000000f]"
+                  className="w-full rounded-3xl px-5 py-3 pr-12 shadow-md"
+                  style={{
+                    backgroundColor: 'var(--color-background-secondary)',
+                    color: 'var(--color-text-primary)',
+                    border: '1px solid var(--color-border-tertiary)',
+                  }}
                 />
               </div>
             </div>

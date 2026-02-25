@@ -66,7 +66,7 @@ export function Map({ className }: MapProps) {
           'relative w-full h-full',
           isFullscreen
             ? 'rounded-none border-0'
-            : 'border border-black/10 dark:border-white/10 rounded-2xl sm:rounded-3xl'
+            : 'border border-[var(--color-border-tertiary)] rounded-2xl sm:rounded-3xl'
         )}
       >
         {/* Fullscreen button - only show in embedded mode */}

@@ -29,8 +29,8 @@ export const FilmStrip = React.forwardRef<HTMLDivElement, FilmStripProps>(
             className={cn(
               'block w-full h-auto p-[1px] pointer-events-auto rounded-[10px] border transition-all',
               idx === selectedIndex
-                ? 'border-primary shadow-md'
-                : 'border-transparent hover:border-primary/30 opacity-60 hover:opacity-100'
+                ? 'border-[var(--color-ring-primary)] shadow-md'
+                : 'border-transparent hover:border-[var(--color-ring-primary)]/30 opacity-60 hover:opacity-100'
             )}
           >
             <div className="aspect-[5/3] rounded-lg overflow-hidden w-full">

@@ -11,14 +11,15 @@ describe('Card', () => {
     );
 
     const card = container.firstChild as HTMLElement;
-    expect(card.className).toContain('border border-subtle bg-surface');
+    expect(card.className).toContain('border border-[var(--color-border-tertiary)]');
+    expect(card.className).toContain('bg-[var(--color-background-primary)]');
 
     rerender(
       <Card variant="bordered" data-testid="card">
         Content
       </Card>
     );
-    expect(card.className).toContain('border-2 border-default bg-surface');
+    expect(card.className).toContain('border-2 border-[var(--color-border-primary)]');
 
     rerender(
       <Card variant="elevated" data-testid="card">

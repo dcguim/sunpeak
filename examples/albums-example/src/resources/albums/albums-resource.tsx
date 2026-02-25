@@ -9,9 +9,8 @@ export const resource: ResourceConfig = {
   mimeType: 'text/html;profile=mcp-app',
   _meta: {
     ui: {
-      domain: 'https://sunpeak.ai',
       csp: {
-        resourceDomains: ['https://cdn.sunpeak.ai', 'https://cdn.openai.com'],
+        resourceDomains: ['https://cdn.sunpeak.ai'],
       },
     },
   },

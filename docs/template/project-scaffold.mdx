@@ -23,7 +23,7 @@ When you create a new project with `sunpeak new`, the sunpeak framework gives yo
     - Each resource's simulations live in their own folder: `tests/simulations/{name}/`
     - Simulation files follow the naming convention: `{name}-{scenario}-simulation.json`
 - `tests/e2e/` - Directory containing end-to-end Playwright tests for each resource.
-    Uses the ChatGPTSimulator to test your resources render properly with any state (tool calls, saved state, dark mode, pip display mode, etc.).
+    Uses the Simulator to test your resources render properly across hosts (ChatGPT, Claude) and states (tool calls, saved state, dark mode, pip display mode, etc.).
 
 <Note>
 No entry point files needed! The framework automatically discovers your simulations and resources using conventions.

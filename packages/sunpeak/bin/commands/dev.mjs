@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 import * as fs from 'fs';
 import * as path from 'path';
-const { existsSync, readFileSync } = fs;
+const { existsSync, readFileSync, watch: fsWatch } = fs;
 const { join, resolve, basename, dirname } = path;
 import { createRequire } from 'module';
 import { pathToFileURL } from 'url';
+import { spawn } from 'child_process';
 
 /**
  * Import a module from the project's node_modules using ESM resolution
@@ -52,6 +53,65 @@ async function importFromProject(require, moduleName) {
 
   const entryPath = join(pkgDir, entry);
   return import(pathToFileURL(entryPath).href);
+}
+
+/**
+ * Run an initial production build and watch source files for changes.
+ * Tunnel clients (e.g. Claude via ngrok) are served the pre-built HTML since they
+ * can't reach the local Vite dev server. This keeps the prod output up to date.
+ *
+ * When a file changes during a build, the current build is killed and restarted.
+ */
+function startBuildWatcher(projectRoot, resourcesDir) {
+  let activeChild = null;
+  const sunpeakBin = join(dirname(new URL(import.meta.url).pathname), '..', 'sunpeak.js');
+
+  const runBuild = (reason) => {
+    // Kill any in-progress build and start fresh
+    if (activeChild) {
+      activeChild.kill('SIGTERM');
+      activeChild = null;
+    }
+
+    console.log(`[build] ${reason}`);
+    const child = spawn(process.execPath, [sunpeakBin, 'build'], {
+      cwd: projectRoot,
+      stdio: ['ignore', 'inherit', 'inherit'],
+      env: { ...process.env, NODE_ENV: 'production' },
+    });
+    activeChild = child;
+
+    child.on('exit', (code) => {
+      if (child !== activeChild) return; // Superseded by a newer build
+      activeChild = null;
+      if (code !== 0 && code !== null) {
+        console.error(`[build] Failed (exit ${code})`);
+      }
+    });
+  };
+
+  // Initial build
+  runBuild('Initial production build for tunnel clients...');
+
+  // Watch src/resources/ for changes using fs.watch (recursive supported on macOS/Windows)
+  let debounceTimer = null;
+  try {
+    fsWatch(resourcesDir, { recursive: true }, (_event, filename) => {
+      if (!filename) return;
+      // Only rebuild on source file changes
+      if (!/\.(tsx?|css)$/.test(filename)) return;
+      // Skip test files
+      if (/\.(test|spec)\.tsx?$/.test(filename)) return;
+
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        runBuild(`Rebuilding (${filename} changed)...`);
+      }, 500);
+    });
+    console.log('[build] Watching src/resources/ for changes...');
+  } catch {
+    console.warn('[build] Could not start file watcher — run "sunpeak build" manually after changes');
+  }
 }
 
 /**
@@ -288,6 +348,12 @@ if (import.meta.hot) {
       port: 8000,
       ...(mcpViteServer && { viteServer: mcpViteServer }),
     });
+
+    // Build production bundles and watch for changes.
+    // Tunnel clients (e.g. Claude via ngrok) get the pre-built HTML since they can't
+    // reach the local Vite dev server. The watcher rebuilds on source file changes
+    // so the prod output stays fresh without manual `sunpeak build`.
+    startBuildWatcher(projectRoot, resourcesDir);
 
     // Handle signals - close both servers
     process.on('SIGINT', async () => {

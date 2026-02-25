@@ -2,6 +2,7 @@ import type {
   McpUiDisplayMode,
   McpUiHostContext,
   McpUiHostCapabilities,
+  McpUiStyles,
 } from '@modelcontextprotocol/ext-apps';
 import type { ScreenWidth } from './simulator-types';
 
@@ -52,6 +53,13 @@ export interface HostShell {
   hostInfo: { name: string; version: string };
   /** Host capabilities reported to the app via MCP protocol */
   hostCapabilities: McpUiHostCapabilities;
+  /**
+   * MCP App style variables sent to the app via hostContext.styles.variables.
+   * Uses CSS light-dark() values so a single set adapts to theme automatically.
+   * The SDK's applyDocumentTheme() sets color-scheme which light-dark() reads.
+   * @see McpUiStyleVariableKey from @modelcontextprotocol/ext-apps
+   */
+  styleVariables?: McpUiStyles;
 }
 
 // ── Host Shell Registry ──────────────────────────────────────────

@@ -225,6 +225,7 @@ export async function build(projectRoot = process.cwd()) {
 
       // Build with vite programmatically
       await viteBuild({
+        mode: 'production',
         root: projectRoot,
         plugins: [react(), tailwindcss(), inlineCssPlugin(buildOutDir)],
         define: {

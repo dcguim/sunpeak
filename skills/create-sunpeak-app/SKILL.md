@@ -60,7 +60,6 @@ export const resource: ResourceConfig = {
   mimeType: 'text/html;profile=mcp-app',
   _meta: {
     ui: {
-      domain: 'https://myapp.example.com',
       csp: {
         resourceDomains: ['https://cdn.example.com'],
       },
@@ -87,7 +86,7 @@ export function WeatherResource() {
   const context = useHostContext();
   const displayMode = useDisplayMode();
 
-  if (isLoading) return <div className="p-4 text-secondary">Loading...</div>;
+  if (isLoading) return <div className="p-4 text-[var(--color-text-secondary)]">Loading...</div>;
 
   const isFullscreen = displayMode === 'fullscreen';
   const hasTouch = context?.deviceCapabilities?.touch ?? false;
@@ -95,8 +94,8 @@ export function WeatherResource() {
   return (
     <SafeArea className={isFullscreen ? 'flex flex-col h-screen' : undefined}>
       <div className="p-4">
-        <h1 className="text-primary font-semibold">{input?.city}</h1>
-        <p className={`${hasTouch ? 'text-base' : 'text-sm'} text-secondary`}>
+        <h1 className="text-[var(--color-text-primary)] font-semibold">{input?.city}</h1>
+        <p className={`${hasTouch ? 'text-base' : 'text-sm'} text-[var(--color-text-secondary)]`}>
           {output?.temperature}° — {output?.condition}
         </p>
       </div>
@@ -107,7 +106,7 @@ export function WeatherResource() {
 
 **Rules:**
 - Always wrap in `<SafeArea>` to respect host insets
-- Use Tailwind semantic tokens: `text-primary`, `text-secondary`, `bg-surface`, `border-subtle`
+- Use MCP standard CSS variables via Tailwind arbitrary values: `text-[var(--color-text-primary)]`, `text-[var(--color-text-secondary)]`, `bg-[var(--color-background-primary)]`, `border-[var(--color-border-tertiary)]`
 - `useToolData<TInput, TOutput>()` — provide types for both input and output
 - All hooks must be called before any early `return` (React rules of hooks)
 - Do NOT mutate `app` directly inside hooks — use `eslint-disable-next-line react-hooks/immutability` for class setters
@@ -330,23 +329,23 @@ export function MyResource() {
 
 `SafeArea` applies `padding` equal to `useSafeArea()` insets automatically.
 
-## Tailwind Semantic Tokens
+## Styling with MCP Standard Variables
 
-Use these tokens instead of raw colors for host theme compatibility:
+Use MCP standard CSS variables via Tailwind arbitrary values instead of raw colors. These variables adapt automatically to each host's theme (ChatGPT, Claude):
 
-| Token | Usage |
-|-------|-------|
-| `text-primary` | Primary text |
-| `text-secondary` | Secondary/muted text |
-| `bg-surface` | Card/surface background |
-| `bg-surface-secondary` | Secondary/nested surface background |
-| `bg-background` | Page background |
-| `bg-primary` | Primary action color (e.g. badge fill) |
-| `text-on-primary` | Text on primary-colored backgrounds |
-| `border-subtle` | Subtle border |
-| `dark:` variant | Dark mode via `[data-theme="dark"]` |
+| Tailwind Class | CSS Variable | Usage |
+|-------|-------|-------|
+| `text-[var(--color-text-primary)]` | `--color-text-primary` | Primary text |
+| `text-[var(--color-text-secondary)]` | `--color-text-secondary` | Secondary/muted text |
+| `bg-[var(--color-background-primary)]` | `--color-background-primary` | Card/surface background |
+| `bg-[var(--color-background-secondary)]` | `--color-background-secondary` | Secondary/nested surface background |
+| `bg-[var(--color-background-tertiary)]` | `--color-background-tertiary` | Tertiary background |
+| `bg-[var(--color-ring-primary)]` | `--color-ring-primary` | Primary action color (e.g. badge fill) |
+| `border-[var(--color-border-tertiary)]` | `--color-border-tertiary` | Subtle border |
+| `border-[var(--color-border-primary)]` | `--color-border-primary` | Default border |
+| `dark:` variant | — | Dark mode via `[data-theme="dark"]` |
 
-`useHostContext()` automatically applies `data-theme` to the document, so Tailwind's `dark:` variant works with no extra setup.
+These variables use CSS `light-dark()` so they respond to theme changes automatically. The `dark:` Tailwind variant also works via `[data-theme="dark"]`.
 
 ## E2E Tests with Playwright
 
@@ -393,6 +392,7 @@ test('loads without console errors', async ({ page }) => {
 | Param | Type | Description |
 |-------|------|-------------|
 | `simulation` | `string` | Simulation name without `-simulation.json` (e.g. `'carousel-show'`) |
+| `host` | `'chatgpt' \| 'claude'` | Host shell (default: `'chatgpt'`) |
 | `theme` | `'light' \| 'dark'` | Color theme (default: `'dark'`) |
 | `displayMode` | `'inline' \| 'pip' \| 'fullscreen'` | Display mode (default: `'inline'`) |
 | `locale` | `string` | Locale string, e.g. `'en-US'` |
@@ -413,7 +413,6 @@ export const resource: ResourceConfig = {
   mimeType: 'text/html;profile=mcp-app',  // Required for MCP App resources
   _meta: {
     ui: {
-      domain: 'https://myapp.example.com',  // Origin domain
       csp: {
         resourceDomains: ['https://cdn.example.com'],    // Image/script CDNs
         connectDomains: ['https://api.example.com'],     // API fetch targets
@@ -428,7 +427,7 @@ export const resource: ResourceConfig = {
 1. **Hooks before early returns** — All hooks must run unconditionally. Move `useMemo`/`useEffect` above any `if (...) return` blocks.
 2. **Missing `<SafeArea>`** — Always wrap content in `<SafeArea>` to respect host safe area insets.
 3. **Wrong Playwright locator** — Use `page.frameLocator('iframe').locator(...)` for resource content, never `page.locator(...)`.
-4. **Hardcoded colors** — Use Tailwind semantic tokens (`text-primary`, `bg-surface`) not raw colors.
+4. **Hardcoded colors** — Use MCP standard CSS variables via Tailwind arbitrary values (`text-[var(--color-text-primary)]`, `bg-[var(--color-background-primary)]`) not raw colors.
 5. **Simulation name mismatch** — The simulation key is the filename without `-simulation.json`: `carousel-show-simulation.json` → `carousel-show`.
 6. **Mutating hook params** — Use `eslint-disable-next-line react-hooks/immutability` for `app.onteardown = ...` (class setter, not a mutation).
 7. **Forgetting text fallback** — Include `toolResult.content[]` in simulations for non-UI hosts.

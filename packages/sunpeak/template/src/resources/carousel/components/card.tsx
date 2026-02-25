@@ -43,9 +43,11 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
     ref
   ) => {
     const variantClasses = {
-      default: 'border border-subtle bg-surface',
-      bordered: 'border-2 border-default bg-surface',
-      elevated: 'border border-subtle bg-surface shadow-lg',
+      default: 'border border-[var(--color-border-tertiary)] bg-[var(--color-background-primary)]',
+      bordered:
+        'border-2 border-[var(--color-border-primary)] bg-[var(--color-background-primary)]',
+      elevated:
+        'border border-[var(--color-border-tertiary)] bg-[var(--color-background-primary)] shadow-lg',
     };
 
     const handleCardClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -109,7 +111,9 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
               {header}
             </h2>
           )}
-          {metadata && <p className="text-secondary text-xs mb-1">{metadata}</p>}
+          {metadata && (
+            <p className="text-[var(--color-text-secondary)] text-xs mb-1">{metadata}</p>
+          )}
           {children && <div className="text-sm leading-normal line-clamp-2 mb-3">{children}</div>}
           {hasButtons && (
             <div className="flex gap-2 flex-wrap mt-auto">

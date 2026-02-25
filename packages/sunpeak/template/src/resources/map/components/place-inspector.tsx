@@ -54,7 +54,7 @@ export const PlaceInspector = React.forwardRef<HTMLDivElement, PlaceInspectorPro
           <X className="h-[18px] w-[18px]" aria-hidden="true" />
         </Button>
 
-        <div className="relative h-full overflow-y-auto rounded-none xl:rounded-3xl bg-surface xl:shadow-xl xl:ring ring-black/10 dark:ring-white/10">
+        <div className="relative h-full overflow-y-auto rounded-none xl:rounded-3xl bg-[var(--color-background-primary)] xl:shadow-xl xl:ring ring-black/10 dark:ring-white/10">
           {/* Thumbnail */}
           <div className="relative mt-2 xl:mt-0 px-2 xl:px-0">
             <img
@@ -68,8 +68,10 @@ export const PlaceInspector = React.forwardRef<HTMLDivElement, PlaceInspectorPro
           <div className="h-[calc(100%-11rem)] sm:h-[calc(100%-14rem)]">
             {/* Place info */}
             <div className="p-4 sm:p-5">
-              <div className="text-2xl font-medium truncate text-primary">{place.name}</div>
-              <div className="text-sm mt-1 text-secondary flex items-center gap-1">
+              <div className="text-2xl font-medium truncate text-[var(--color-text-primary)]">
+                {place.name}
+              </div>
+              <div className="text-sm mt-1 text-[var(--color-text-secondary)] flex items-center gap-1">
                 <Star className="h-3.5 w-3.5" aria-hidden="true" />
                 {place.rating.toFixed(1)}
                 {place.price && <span>· {place.price}</span>}
@@ -100,7 +102,7 @@ export const PlaceInspector = React.forwardRef<HTMLDivElement, PlaceInspectorPro
               </div>
 
               {/* Description */}
-              <div className="text-sm mt-5 text-primary">
+              <div className="text-sm mt-5 text-[var(--color-text-primary)]">
                 {place.description} Enjoy a slice at one of SF&apos;s favorites. Fresh ingredients,
                 great crust, and cozy vibes.
               </div>
@@ -108,15 +110,21 @@ export const PlaceInspector = React.forwardRef<HTMLDivElement, PlaceInspectorPro
 
             {/* Reviews */}
             <div className="px-4 sm:px-5 pb-4">
-              <div className="text-lg font-medium mb-2 text-primary">Reviews</div>
+              <div className="text-lg font-medium mb-2 text-[var(--color-text-primary)]">
+                Reviews
+              </div>
               <ul className="space-y-3 divide-y divide-black/5 dark:divide-white/5">
                 {REVIEWS.map((review, idx) => (
                   <li key={idx} className="py-3">
                     <div className="flex items-start gap-3">
                       <Avatar imageUrl={review.avatar} name={review.user} size={32} />
                       <div className="min-w-0 gap-1 flex flex-col">
-                        <div className="text-xs font-medium text-secondary">{review.user}</div>
-                        <div className="text-sm text-primary">{review.text}</div>
+                        <div className="text-xs font-medium text-[var(--color-text-secondary)]">
+                          {review.user}
+                        </div>
+                        <div className="text-sm text-[var(--color-text-primary)]">
+                          {review.text}
+                        </div>
                       </div>
                     </div>
                   </li>

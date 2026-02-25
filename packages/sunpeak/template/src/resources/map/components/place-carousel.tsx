@@ -26,7 +26,7 @@ export const PlaceCarousel = React.forwardRef<HTMLDivElement, PlaceCarouselProps
               {places.map((place) => (
                 <div
                   key={place.id}
-                  className="ring ring-black/10 dark:ring-white/10 max-w-[330px] w-full shadow-xl rounded-2xl bg-surface flex-shrink-0"
+                  className="ring ring-black/10 dark:ring-white/10 max-w-[330px] w-full shadow-xl rounded-2xl bg-[var(--color-background-primary)] flex-shrink-0"
                 >
                   <PlaceCard
                     place={place}

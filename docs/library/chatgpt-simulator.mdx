@@ -1,6 +1,6 @@
 ---
 title: "Simulator"
-description: "Local development environment replicating the ChatGPT App host runtime."
+description: "Local development environment replicating MCP App host runtimes (ChatGPT, Claude)."
 ---
 
 import ChatGPTSimulator from '/snippets/chatgpt-simulator.mdx';
@@ -12,7 +12,7 @@ import ChatGPTSimulator from '/snippets/chatgpt-simulator.mdx';
 
 ## Overview
 
-The simulator is a local development environment that replicates the ChatGPT App host runtime. It uses the `ChatGPTSimulator` React component.
+The simulator is a local development environment that replicates MCP App host runtimes. It uses the `Simulator` React component and supports multiple hosts (ChatGPT, Claude) — switch between them from the sidebar or via the `host` URL parameter.
 
 ## Why Use the Simulator?
 
@@ -109,12 +109,12 @@ Fun fact: Some science fiction authors believe we live in a sunpeak simulation.
 Simulations can be passed into:
 
 <AccordionGroup>
-  <Accordion title="ChatGPTSimulator - for local testing">
-    The `ChatGPTSimulator` component provides a local development environment that replicates the host runtime.
+  <Accordion title="Simulator - for local testing">
+    The `Simulator` component provides a local development environment that replicates host runtimes (ChatGPT, Claude).
 
     <ChatGPTSimulator />
 
-    [View ChatGPTSimulator API Reference](/api-reference/simulations/chatgpt-simulator)
+    [View Simulator API Reference](/api-reference/simulations/chatgpt-simulator)
   </Accordion>
 
   <Accordion title="runMCPServer - for host testing">
@@ -142,6 +142,6 @@ Simulations can be passed into:
 <Card horizontal title="Simulation API Reference" icon="code" href="/api-reference/simulations/simulation">
   TypeScript interface for library users.
 </Card>
-<Card horizontal title="ChatGPTSimulator API Reference" icon="desktop" href="/api-reference/simulations/chatgpt-simulator">
+<Card horizontal title="Simulator API Reference" icon="desktop" href="/api-reference/simulations/chatgpt-simulator">
   Full component documentation and configuration options.
 </Card>

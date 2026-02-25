@@ -1,6 +1,6 @@
 import { useCallback, useSyncExternalStore } from 'react';
 import type { App, McpUiHostContext } from '@modelcontextprotocol/ext-apps';
-import { applyDocumentTheme } from '@modelcontextprotocol/ext-apps';
+import { applyDocumentTheme, applyHostStyleVariables } from '@modelcontextprotocol/ext-apps';
 import { useApp } from './use-app';
 
 /**
@@ -20,16 +20,26 @@ function getRegistry(app: App): Set<() => void> {
     subs = new Set();
     registries.set(app, subs);
 
-    // Apply initial theme from the host context received during initialization
+    // Apply initial theme and style variables from the host context received during initialization
     const ctx = app.getHostContext();
     if (ctx?.theme) {
       applyDocumentTheme(ctx.theme);
     }
+    if (ctx?.styles?.variables) {
+      applyHostStyleVariables(ctx.styles.variables);
+      // Set the document background to match the host's primary background so the
+      // iframe canvas doesn't default to white (browsers paint white behind transparent).
+      document.documentElement.style.backgroundColor = 'var(--color-background-primary)';
+    }
 
     app.onhostcontextchanged = (params) => {
-      // Apply theme to document when host changes it
+      // Apply theme and style variables to document when host changes them
       if (params.theme) {
         applyDocumentTheme(params.theme);
+      }
+      if (params.styles?.variables) {
+        applyHostStyleVariables(params.styles.variables);
+        document.documentElement.style.backgroundColor = 'var(--color-background-primary)';
       }
       for (const fn of subs!) fn();
     };

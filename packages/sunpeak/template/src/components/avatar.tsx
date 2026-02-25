@@ -24,7 +24,10 @@ export function Avatar({ imageUrl, name, size = 32, className }: AvatarProps) {
           onError={() => setImgError(true)}
         />
       ) : (
-        <span className="text-secondary font-medium leading-none" style={{ fontSize: size * 0.4 }}>
+        <span
+          className="text-[var(--color-text-secondary)] font-medium leading-none"
+          style={{ fontSize: size * 0.4 }}
+        >
           {initial}
         </span>
       )}

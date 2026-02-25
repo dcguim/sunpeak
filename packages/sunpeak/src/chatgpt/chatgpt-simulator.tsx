@@ -47,6 +47,7 @@ interface ChatGPTSimulatorProps {
  * - hover: 'true' | 'false'
  * - touch: 'true' | 'false'
  * - safeAreaTop, safeAreaBottom, safeAreaLeft, safeAreaRight: number
+ * - host: 'chatgpt' | 'claude'
  */
 function parseUrlParams(): {
   simulation?: string;
@@ -492,7 +493,12 @@ export function ChatGPTSimulator({
                 <SidebarControl label="Safe Area Insets">
                   <div className="grid grid-cols-4 gap-1">
                     <div className="flex items-center gap-0.5">
-                      <span className="text-[10px] text-secondary">&uarr;</span>
+                      <span
+                        className="text-[10px]"
+                        style={{ color: 'var(--color-text-secondary)' }}
+                      >
+                        &uarr;
+                      </span>
                       <SidebarInput
                         type="number"
                         value={String(safeAreaInsets.top)}
@@ -502,7 +508,12 @@ export function ChatGPTSimulator({
                       />
                     </div>
                     <div className="flex items-center gap-0.5">
-                      <span className="text-[10px] text-secondary">&darr;</span>
+                      <span
+                        className="text-[10px]"
+                        style={{ color: 'var(--color-text-secondary)' }}
+                      >
+                        &darr;
+                      </span>
                       <SidebarInput
                         type="number"
                         value={String(safeAreaInsets.bottom)}
@@ -512,7 +523,12 @@ export function ChatGPTSimulator({
                       />
                     </div>
                     <div className="flex items-center gap-0.5">
-                      <span className="text-[10px] text-secondary">&larr;</span>
+                      <span
+                        className="text-[10px]"
+                        style={{ color: 'var(--color-text-secondary)' }}
+                      >
+                        &larr;
+                      </span>
                       <SidebarInput
                         type="number"
                         value={String(safeAreaInsets.left)}
@@ -522,7 +538,12 @@ export function ChatGPTSimulator({
                       />
                     </div>
                     <div className="flex items-center gap-0.5">
-                      <span className="text-[10px] text-secondary">&rarr;</span>
+                      <span
+                        className="text-[10px]"
+                        style={{ color: 'var(--color-text-secondary)' }}
+                      >
+                        &rarr;
+                      </span>
                       <SidebarInput
                         type="number"
                         value={String(safeAreaInsets.right)}

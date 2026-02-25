@@ -9,12 +9,10 @@ export const resource: ResourceConfig = {
   mimeType: 'text/html;profile=mcp-app',
   _meta: {
     ui: {
-      domain: 'https://sunpeak.ai',
       csp: {
         connectDomains: ['https://api.mapbox.com', 'https://events.mapbox.com'],
         resourceDomains: [
           'https://cdn.sunpeak.ai',
-          'https://cdn.openai.com',
           'https://api.mapbox.com',
           'https://events.mapbox.com',
         ],

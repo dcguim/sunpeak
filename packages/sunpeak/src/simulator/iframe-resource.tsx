@@ -88,12 +88,6 @@ export function extractResourceCSP(resource: { _meta?: unknown }): ResourceCSP |
 }
 
 /**
- * Domains required by the sunpeak SDK and its peer dependencies
- * (fonts/styles loaded from cdn.openai.com).
- */
-const SDK_RESOURCE_DOMAINS = ['https://cdn.openai.com'];
-
-/**
  * Validates a CSP source entry is a safe origin URL (scheme + host + optional port).
  * Rejects wildcards, CSP keywords, and whitespace that could inject extra directives.
  */
@@ -148,7 +142,6 @@ function generateCSP(csp: ResourceCSP | undefined, scriptSrc: string): string {
 
   const resourceSources = new Set<string>(["'self'", 'data:', 'blob:']);
   if (scriptOrigin) resourceSources.add(scriptOrigin);
-  for (const domain of SDK_RESOURCE_DOMAINS) resourceSources.add(domain);
   if (csp?.resourceDomains) {
     for (const domain of csp.resourceDomains) {
       if (isValidCspSource(domain)) {
@@ -227,7 +220,7 @@ function generateScriptHtml(scriptSrc: string, theme: string, cspPolicy: string)
       margin: 0;
       padding: 0;
       width: 100%;
-      background-color: var(--color-surface);
+      background: transparent;
     }
   </style>
   <script>${PAINT_FENCE_SCRIPT}</script>

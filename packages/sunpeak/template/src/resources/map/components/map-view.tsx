@@ -195,7 +195,7 @@ export function MapView({
       className={cn(
         'absolute inset-0 overflow-hidden',
         isFullscreen &&
-          'left-[340px] right-2 top-2 bottom-4 border border-black/10 dark:border-white/10 rounded-3xl',
+          'left-[340px] right-2 top-2 bottom-4 border border-[var(--color-border-tertiary)] rounded-3xl',
         className
       )}
     >

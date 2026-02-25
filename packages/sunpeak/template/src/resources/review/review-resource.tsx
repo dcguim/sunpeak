@@ -17,9 +17,8 @@ export const resource: ResourceConfig = {
   mimeType: 'text/html;profile=mcp-app',
   _meta: {
     ui: {
-      domain: 'https://sunpeak.ai',
       csp: {
-        resourceDomains: ['https://cdn.sunpeak.ai', 'https://cdn.openai.com'],
+        resourceDomains: ['https://cdn.sunpeak.ai'],
       },
     },
   },
@@ -150,16 +149,26 @@ function DetailsSection({ content }: { content: Detail[] }) {
         <div
           key={i}
           className={`flex justify-between items-start gap-4 ${
-            detail.emphasis ? 'font-semibold pt-2 border-t border-subtle' : ''
+            detail.emphasis
+              ? 'font-semibold pt-2 border-t border-[var(--color-border-tertiary)]'
+              : ''
           }`}
         >
           <div className="flex-1 min-w-0">
-            <span className={detail.emphasis ? 'text-primary' : 'text-secondary'}>
+            <span
+              className={
+                detail.emphasis
+                  ? 'text-[var(--color-text-primary)]'
+                  : 'text-[var(--color-text-secondary)]'
+              }
+            >
               {detail.label}
             </span>
-            {detail.sublabel && <p className="text-xs text-secondary mt-0.5">{detail.sublabel}</p>}
+            {detail.sublabel && (
+              <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">{detail.sublabel}</p>
+            )}
           </div>
-          <span className="text-primary flex-shrink-0">{detail.value}</span>
+          <span className="text-[var(--color-text-primary)] flex-shrink-0">{detail.value}</span>
         </div>
       ))}
     </div>
@@ -170,7 +179,10 @@ function ItemsSection({ content }: { content: Item[] }) {
   return (
     <div className="space-y-3">
       {content.map((item) => (
-        <div key={item.id} className="flex items-center gap-3 p-2 rounded-lg bg-surface-secondary">
+        <div
+          key={item.id}
+          className="flex items-center gap-3 p-2 rounded-lg bg-[var(--color-background-secondary)]"
+        >
           {item.image && (
             <img
               src={item.image}
@@ -180,17 +192,23 @@ function ItemsSection({ content }: { content: Item[] }) {
           )}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-primary truncate">{item.title}</span>
+              <span className="text-sm font-medium text-[var(--color-text-primary)] truncate">
+                {item.title}
+              </span>
               {item.badge && (
-                <span className="px-1.5 py-0.5 text-xs rounded bg-primary text-on-primary">
+                <span className="px-1.5 py-0.5 text-xs rounded bg-[var(--color-ring-primary)] text-white">
                   {item.badge}
                 </span>
               )}
             </div>
-            {item.subtitle && <p className="text-xs text-secondary truncate">{item.subtitle}</p>}
+            {item.subtitle && (
+              <p className="text-xs text-[var(--color-text-secondary)] truncate">{item.subtitle}</p>
+            )}
           </div>
           {item.value && (
-            <span className="text-sm font-medium text-primary flex-shrink-0">{item.value}</span>
+            <span className="text-sm font-medium text-[var(--color-text-primary)] flex-shrink-0">
+              {item.value}
+            </span>
           )}
         </div>
       ))}
@@ -206,7 +224,7 @@ function ChangesSection({ content }: { content: Change[] }) {
         return (
           <li
             key={change.id}
-            className="rounded-lg border border-subtle p-3"
+            className="rounded-lg border border-[var(--color-border-tertiary)] p-3"
             style={{ backgroundColor: config.bg }}
           >
             <div className="flex items-start gap-3">
@@ -223,12 +241,16 @@ function ChangesSection({ content }: { content: Change[] }) {
               </span>
               <div className="flex-1 min-w-0">
                 {change.path && (
-                  <code className="block text-xs text-secondary font-mono truncate mb-1">
+                  <code className="block text-xs text-[var(--color-text-secondary)] font-mono truncate mb-1">
                     {change.path}
                   </code>
                 )}
                 <p className="text-sm text-[#000000]">{change.description}</p>
-                {change.details && <p className="mt-1 text-xs text-secondary">{change.details}</p>}
+                {change.details && (
+                  <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
+                    {change.details}
+                  </p>
+                )}
               </div>
             </div>
           </li>
@@ -240,24 +262,34 @@ function ChangesSection({ content }: { content: Change[] }) {
 
 function PreviewSection({ content }: { content: string }) {
   return (
-    <div className="p-4 rounded-lg bg-surface-secondary border border-subtle">
-      <p className="text-sm text-primary whitespace-pre-wrap">{content}</p>
+    <div className="p-4 rounded-lg bg-[var(--color-background-secondary)] border border-[var(--color-border-tertiary)]">
+      <p className="text-sm text-[var(--color-text-primary)] whitespace-pre-wrap">{content}</p>
     </div>
   );
 }
 
 function SummarySection({ content }: { content: Detail[] }) {
   return (
-    <div className="p-3 rounded-lg bg-surface-secondary space-y-1">
+    <div className="p-3 rounded-lg bg-[var(--color-background-secondary)] space-y-1">
       {content.map((item, i) => (
         <div
           key={i}
           className={`flex justify-between items-center ${
-            item.emphasis ? 'font-semibold text-lg pt-2 border-t border-subtle mt-2' : 'text-sm'
+            item.emphasis
+              ? 'font-semibold text-lg pt-2 border-t border-[var(--color-border-tertiary)] mt-2'
+              : 'text-sm'
           }`}
         >
-          <span className={item.emphasis ? 'text-primary' : 'text-secondary'}>{item.label}</span>
-          <span className="text-primary">{item.value}</span>
+          <span
+            className={
+              item.emphasis
+                ? 'text-[var(--color-text-primary)]'
+                : 'text-[var(--color-text-secondary)]'
+            }
+          >
+            {item.label}
+          </span>
+          <span className="text-[var(--color-text-primary)]">{item.value}</span>
         </div>
       ))}
     </div>
@@ -285,7 +317,7 @@ function SectionRenderer({ section }: { section: Section }) {
   return (
     <div className="space-y-2">
       {section.title && (
-        <h2 className="text-sm font-medium text-secondary uppercase tracking-wide">
+        <h2 className="text-sm font-medium text-[var(--color-text-secondary)] uppercase tracking-wide">
           {section.title}
         </h2>
       )}
@@ -395,11 +427,13 @@ export function ReviewResource() {
   return (
     <SafeArea className="flex flex-col">
       {/* Header */}
-      <div className="px-4 pt-4 pb-3 border-b border-subtle">
+      <div className="px-4 pt-4 pb-3 border-b border-[var(--color-border-tertiary)]">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
-            <h1 className="text-xl font-semibold text-primary">{data.title}</h1>
-            {data.description && <p className="mt-1 text-sm text-secondary">{data.description}</p>}
+            <h1 className="text-xl font-semibold text-[var(--color-text-primary)]">{data.title}</h1>
+            {data.description && (
+              <p className="mt-1 text-sm text-[var(--color-text-secondary)]">{data.description}</p>
+            )}
           </div>
           {!isFullscreen && (
             <Button
@@ -431,7 +465,7 @@ export function ReviewResource() {
         {sections.length === 0 ? (
           // Note: Apps cannot distinguish between "still loading" and "empty response".
           // We show a loading state as the optimistic assumption.
-          <div className="flex items-center justify-center gap-2 py-8 text-secondary">
+          <div className="flex items-center justify-center gap-2 py-8 text-[var(--color-text-secondary)]">
             <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
             <span>Loading...</span>
           </div>
@@ -441,7 +475,7 @@ export function ReviewResource() {
       </div>
 
       {/* Footer with Actions */}
-      <div className="px-4 py-3 border-t border-subtle bg-surface">
+      <div className="px-4 py-3 border-t border-[var(--color-border-tertiary)] bg-[var(--color-background-primary)]">
         {decision === null ? (
           <div className="flex gap-3">
             <Button
@@ -475,7 +509,7 @@ export function ReviewResource() {
               </span>
             </div>
             {state.decidedAt && (
-              <span className="text-xs text-secondary">
+              <span className="text-xs text-[var(--color-text-secondary)]">
                 {new Date(state.decidedAt).toLocaleString()}
               </span>
             )}

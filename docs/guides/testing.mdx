@@ -100,7 +100,7 @@ sunpeak supports both unit testing and end-to-end testing against the simulator.
     });
     ```
 
-    You'll need to ensure your dev server serves the ChatGPTSimulator component at a known URL for Playwright to test against.
+    You'll need to ensure your dev server serves the Simulator component at a known URL for Playwright to test against.
   </Tab>
 </Tabs>
 
@@ -145,7 +145,7 @@ test('should render in fullscreen mode', async ({ page }) => {
   alt="Simulator set to inline light mode via URL params"
 />
 
-The `createSimulatorUrl` function accepts parameters for configuring theme, display mode, device type, safe area insets, and more. See the [ChatGPTSimulator API Reference](/api-reference/simulations/chatgpt-simulator#createsimulatorurl) for the complete list.
+The `createSimulatorUrl` function accepts parameters for configuring host, theme, display mode, device type, safe area insets, and more. See the [Simulator API Reference](/api-reference/simulations/chatgpt-simulator#createsimulatorurl) for the complete list.
 
 ### Example E2E Test Structure
 
@@ -233,8 +233,9 @@ test.describe('Albums Resource', () => {
     ```
   </Accordion>
 
-  <Accordion title="Test across themes and display modes">
+  <Accordion title="Test across hosts, themes, and display modes">
     Use `createSimulatorUrl` to test your resources in different configurations:
+    - Multiple hosts (ChatGPT, Claude) via the `host` parameter
     - Light and dark themes
     - Inline, PiP, and fullscreen display modes
     - Different device types (mobile, tablet, desktop)

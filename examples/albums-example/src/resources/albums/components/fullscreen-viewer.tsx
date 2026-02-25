@@ -44,16 +44,18 @@ export function FullscreenViewer({ album, className }: FullscreenViewerProps) {
     <SafeArea
       ref={containerRef}
       className={cn(
-        'min-h-dvh flex w-full bg-surface',
+        'min-h-dvh flex w-full bg-[var(--color-background-primary)]',
         isMobile ? 'flex-col' : 'flex-row',
         className
       )}
     >
       {/* Album header - mobile only */}
       {isMobile && (
-        <div className="border-b border-subtle bg-surface/95 backdrop-blur-sm px-4 py-3">
-          <h2 className="text-base font-semibold text-primary">{album.title}</h2>
-          <p className="text-sm text-secondary">
+        <div className="border-b border-[var(--color-border-tertiary)] bg-[var(--color-background-primary)]/95 backdrop-blur-sm px-4 py-3">
+          <h2 className="text-base font-semibold text-[var(--color-text-primary)]">
+            {album.title}
+          </h2>
+          <p className="text-sm text-[var(--color-text-secondary)]">
             {selectedIndex + 1} / {album.photos.length}
           </p>
         </div>
@@ -72,7 +74,7 @@ export function FullscreenViewer({ album, className }: FullscreenViewerProps) {
           <img
             src={selectedPhoto.url}
             alt={selectedPhoto.title || album.title}
-            className="rounded-3xl shadow-sm border border-primary/10 max-w-full max-h-full object-contain"
+            className="rounded-3xl shadow-sm border border-[var(--color-ring-primary)]/10 max-w-full max-h-full object-contain"
           />
         ) : null}
       </div>

@@ -20,8 +20,8 @@ describe('FilmStrip', () => {
 
     const buttons = container.querySelectorAll('button');
 
-    // Selected photo (index 1) should have border-primary
-    expect(buttons[1].className).toContain('border-primary');
+    // Selected photo (index 1) should have accent border
+    expect(buttons[1].className).toContain('border-[var(--color-ring-primary)]');
     expect(buttons[1].className).toContain('shadow-md');
 
     // Non-selected photos should have border-transparent

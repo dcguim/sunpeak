@@ -7,9 +7,11 @@ sunpeak dev
 For custom setups, you can manually configure the simulator:
 
 ```tsx
-import { ChatGPTSimulator } from 'sunpeak/chatgpt';
+import { simulator } from 'sunpeak';
 import { resource } from './resources/example/example-resource';
 import exampleSimulation from './resources/example/example-show-simulation.json';
+
+const { Simulator } = simulator;
 
 // Combine simulation with resource
 const simulations = [{
@@ -18,7 +20,7 @@ const simulations = [{
   resourceUrl: 'http://localhost:3000/resources/example',
 }];
 
-<ChatGPTSimulator
+<Simulator
   simulations={simulations}
   appName="My App"
   appIcon="🌄"

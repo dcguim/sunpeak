@@ -1,7 +1,7 @@
 import type { Theme, DisplayMode, DeviceType } from '../types/runtime';
 
 /**
- * Strongly-typed URL parameters for the ChatGPT Simulator.
+ * Strongly-typed URL parameters for the Simulator.
  *
  * Use with `createSimulatorUrl()` to generate type-safe URL paths for e2e tests.
  *
@@ -14,6 +14,7 @@ import type { Theme, DisplayMode, DeviceType } from '../types/runtime';
  *   simulation: 'albums-show',
  *   theme: 'dark',
  *   displayMode: 'fullscreen',
+ *   host: 'claude',
  * }));
  * ```
  */
@@ -23,6 +24,13 @@ export interface SimulatorUrlParams {
    * Corresponds to the simulation JSON filename without the '-simulation.json' suffix.
    */
   simulation?: string;
+
+  /**
+   * The host shell to use (e.g., 'chatgpt', 'claude').
+   * Switches conversation chrome, theming, and reported host info/capabilities.
+   * @default 'chatgpt'
+   */
+  host?: string;
 
   /**
    * The color theme for the simulator.
@@ -137,6 +145,9 @@ export function createSimulatorUrl(params: SimulatorUrlParams, basePath = '/'): 
   // Add each defined parameter
   if (params.simulation !== undefined) {
     searchParams.set('simulation', params.simulation);
+  }
+  if (params.host !== undefined) {
+    searchParams.set('host', params.host);
   }
   if (params.theme !== undefined) {
     searchParams.set('theme', params.theme);

@@ -46,11 +46,14 @@ export const PlaceList = React.forwardRef<HTMLDivElement, PlaceListProps>(
           className
         )}
       >
-        <div ref={scrollRef} className="relative px-2 h-full overflow-y-auto bg-surface">
+        <div
+          ref={scrollRef}
+          className="relative px-2 h-full overflow-y-auto bg-[var(--color-background-primary)]"
+        >
           {/* Header */}
-          <div className="flex justify-between flex-row items-center px-3 sticky bg-surface top-0 py-4 text-md font-medium">
-            <span className="text-primary">{places.length} results</span>
-            <Settings className="h-5 w-5 text-secondary" aria-hidden="true" />
+          <div className="flex justify-between flex-row items-center px-3 sticky bg-[var(--color-background-primary)] top-0 py-4 text-md font-medium">
+            <span className="text-[var(--color-text-primary)]">{places.length} results</span>
+            <Settings className="h-5 w-5 text-[var(--color-text-secondary)]" aria-hidden="true" />
           </div>
 
           {/* Place list */}

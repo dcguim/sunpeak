@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import userEvent from '@testing-library/user-event';
 import {
@@ -51,48 +51,16 @@ describe('SidebarSelect', () => {
     { value: 'option3', label: 'Option 3' },
   ];
 
-  it('calls onChange when an option is clicked', async () => {
+  it('calls onChange when an option is selected', async () => {
     const handleChange = vi.fn();
     const user = userEvent.setup();
     render(<SidebarSelect value="option1" onChange={handleChange} options={options} />);
 
-    // Open the dropdown
-    const button = screen.getByRole('button');
-    await user.click(button);
+    const select = screen.getByRole('combobox');
+    await user.selectOptions(select, 'option2');
 
-    // Wait for dropdown to appear and click the second option
-    const option2 = await screen.findByRole('option', { name: 'Option 2' });
-    await user.click(option2);
-
-    // Verify onChange was called with the correct value
-    await waitFor(() => {
-      expect(handleChange).toHaveBeenCalledWith('option2');
-      expect(handleChange).toHaveBeenCalledTimes(1);
-    });
-  });
-
-  it('navigates with keyboard (ArrowDown and Enter)', async () => {
-    const handleChange = vi.fn();
-    const user = userEvent.setup();
-    render(<SidebarSelect value="option1" onChange={handleChange} options={options} />);
-
-    // Open the dropdown
-    const button = screen.getByRole('button');
-    await user.click(button);
-
-    // Wait for dropdown to appear
-    await screen.findByRole('option', { name: 'Option 1' });
-
-    // Press ArrowDown to navigate to next option
-    await user.keyboard('{ArrowDown}');
-
-    // Press Enter to select the highlighted option
-    await user.keyboard('{Enter}');
-
-    // Verify onChange was called with option2 (index 1, since we started at option1 which is index 0, then moved down)
-    await waitFor(() => {
-      expect(handleChange).toHaveBeenCalledWith('option2');
-    });
+    expect(handleChange).toHaveBeenCalledWith('option2');
+    expect(handleChange).toHaveBeenCalledTimes(1);
   });
 
   it('displays selected option and shows placeholder when no value selected', () => {
@@ -108,9 +76,10 @@ describe('SidebarSelect', () => {
       />
     );
 
-    expect(screen.getByText('Option 2')).toBeInTheDocument();
+    const select = screen.getByRole('combobox') as HTMLSelectElement;
+    expect(select.value).toBe('option2');
 
-    // Test with no selected value
+    // Test with no selected value — placeholder is a disabled option
     rerender(
       <SidebarSelect
         value=""
@@ -299,7 +268,7 @@ describe('SidebarToggle', () => {
     const handleChange = vi.fn();
     render(<SidebarToggle value="dark" onChange={handleChange} options={options} />);
 
-    // The selected option should be rendered (implementation detail may vary)
+    // The selected option should be rendered
     expect(screen.getByText('Dark')).toBeInTheDocument();
   });
 });

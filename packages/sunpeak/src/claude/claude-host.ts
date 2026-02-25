@@ -1,5 +1,6 @@
 import type { McpUiHostCapabilities } from '@modelcontextprotocol/ext-apps';
 import { registerHostShell } from '../simulator/hosts';
+import { DEFAULT_STYLE_VARIABLES } from '../simulator/host-styles';
 import { ClaudeConversation } from './claude-conversation';
 
 const CLAUDE_HOST_INFO = {
@@ -22,31 +23,34 @@ const CLAUDE_HOST_CAPABILITIES: McpUiHostCapabilities = {
 
 /**
  * Apply Claude-style theming to the document.
+ * Sets data-theme attribute and color-scheme so CSS light-dark() resolves correctly.
  */
 function applyClaudeTheme(theme: 'light' | 'dark'): void {
-  const root = document.documentElement;
-  root.setAttribute('data-theme', theme);
-
-  if (theme === 'light') {
-    root.style.setProperty('--claude-bg', '#f3f0e8');
-    root.style.setProperty('--claude-input-bg', '#ffffff');
-    root.style.setProperty('--claude-card-bg', '#ffffff');
-    root.style.setProperty('--claude-text', '#2d2b27');
-    root.style.setProperty('--claude-text-secondary', '#6b6560');
-    root.style.setProperty('--claude-border', '#e0ddd5');
-    root.style.setProperty('--claude-user-bubble', '#e8e4dc');
-    root.style.setProperty('--claude-accent', '#c55a30');
-  } else {
-    root.style.setProperty('--claude-bg', '#2b2a27');
-    root.style.setProperty('--claude-input-bg', '#3a3935');
-    root.style.setProperty('--claude-card-bg', '#3a3935');
-    root.style.setProperty('--claude-text', '#e8e4dc');
-    root.style.setProperty('--claude-text-secondary', '#9b9690');
-    root.style.setProperty('--claude-border', '#4a4843');
-    root.style.setProperty('--claude-user-bubble', '#3a3935');
-    root.style.setProperty('--claude-accent', '#d4714a');
-  }
+  document.documentElement.setAttribute('data-theme', theme);
+  document.documentElement.style.colorScheme = theme;
 }
+
+/**
+ * Claude-specific style variable overrides (warm beige/cream palette).
+ * Inherits defaults from DEFAULT_STYLE_VARIABLES, overriding only colors.
+ */
+const CLAUDE_STYLE_VARIABLES = {
+  ...DEFAULT_STYLE_VARIABLES,
+  // Background colors — warm beige/cream palette
+  '--color-background-primary': 'light-dark(#f3f0e8, #2b2a27)',
+  '--color-background-secondary': 'light-dark(#ffffff, #3a3935)',
+  '--color-background-tertiary': 'light-dark(#e8e4dc, #4a4843)',
+  '--color-background-inverse': 'light-dark(#2b2a27, #f3f0e8)',
+  // Text colors
+  '--color-text-primary': 'light-dark(#2d2b27, #e8e4dc)',
+  '--color-text-secondary': 'light-dark(#6b6560, #9b9690)',
+  '--color-text-tertiary': 'light-dark(#9b9690, #6b6560)',
+  '--color-text-inverse': 'light-dark(#e8e4dc, #2d2b27)',
+  // Border colors
+  '--color-border-primary': 'light-dark(#e0ddd5, #4a4843)',
+  '--color-border-secondary': 'light-dark(#d5d1c8, #5a5753)',
+  '--color-border-tertiary': 'light-dark(#f0ede5, #3a3935)',
+};
 
 registerHostShell({
   id: 'claude',
@@ -55,4 +59,5 @@ registerHostShell({
   applyTheme: applyClaudeTheme,
   hostInfo: CLAUDE_HOST_INFO,
   hostCapabilities: CLAUDE_HOST_CAPABILITIES,
+  styleVariables: CLAUDE_STYLE_VARIABLES,
 });

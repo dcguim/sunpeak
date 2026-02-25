@@ -72,8 +72,8 @@ export function ClaudeConversation({
       className="flex flex-col w-full h-full flex-1 items-center relative"
       style={{
         transform: 'translate(0)',
-        backgroundColor: 'var(--claude-bg, #f3f0e8)',
-        color: 'var(--claude-text, #2d2b27)',
+        backgroundColor: 'var(--color-background-primary)',
+        color: 'var(--color-text-primary)',
       }}
     >
       {/* ─── Fullscreen chrome overlay ─── */}
@@ -85,8 +85,8 @@ export function ClaudeConversation({
           <div
             className="z-10 flex items-center h-12 border-b px-3 pointer-events-auto"
             style={{
-              borderColor: 'var(--claude-border, #e0ddd5)',
-              backgroundColor: 'var(--claude-bg, #f3f0e8)',
+              borderColor: 'var(--color-border-primary)',
+              backgroundColor: 'var(--color-background-primary)',
             }}
           >
             <button
@@ -103,7 +103,7 @@ export function ClaudeConversation({
           <div className="flex-1" />
           <footer
             className="pointer-events-auto p-3"
-            style={{ backgroundColor: 'var(--claude-bg, #f3f0e8)' }}
+            style={{ backgroundColor: 'var(--color-background-primary)' }}
           >
             <div className="max-w-[48rem] mx-auto">
               <input
@@ -113,9 +113,9 @@ export function ClaudeConversation({
                 placeholder="Reply to sunpeak..."
                 className="w-full rounded-xl px-4 py-2.5 text-sm"
                 style={{
-                  backgroundColor: 'var(--claude-input-bg, #fff)',
-                  border: '1px solid var(--claude-border, #e0ddd5)',
-                  color: 'var(--claude-text, #2d2b27)',
+                  backgroundColor: 'var(--color-background-secondary)',
+                  border: '1px solid var(--color-border-primary)',
+                  color: 'var(--color-text-primary)',
                 }}
               />
             </div>
@@ -129,7 +129,7 @@ export function ClaudeConversation({
           className="h-12 flex items-center px-4 text-sm font-medium sticky top-0 z-40 w-full"
           style={{
             maxWidth: containerWidth,
-            backgroundColor: 'var(--claude-bg, #f3f0e8)',
+            backgroundColor: 'var(--color-background-primary)',
           }}
         >
           <span>sunpeak.ai</span>
@@ -150,7 +150,7 @@ export function ClaudeConversation({
                   <div
                     className="inline-block rounded-2xl px-4 py-2.5 text-sm max-w-[85%]"
                     style={{
-                      backgroundColor: 'var(--claude-user-bubble, #e8e4dc)',
+                      backgroundColor: 'var(--color-background-tertiary)',
                     }}
                   >
                     {userMessage}
@@ -175,7 +175,7 @@ export function ClaudeConversation({
                     ) : (
                       <div
                         className="size-6 rounded-full flex items-center justify-center text-xs font-medium text-white"
-                        style={{ backgroundColor: 'var(--claude-accent, #c55a30)' }}
+                        style={{ backgroundColor: '#c55a30' }}
                       >
                         C
                       </div>
@@ -220,19 +220,19 @@ export function ClaudeConversation({
                     }
                   >
                     <div
-                      className={
-                        isPip
-                          ? 'h-full w-full max-w-full overflow-auto'
-                          : isFullscreen
-                            ? 'h-full w-full max-w-full overflow-auto'
-                            : 'h-full w-full max-w-full bg-transparent'
-                      }
+                      className="h-full w-full max-w-full"
                       style={{
                         ...(isPip
-                          ? { backgroundColor: 'var(--claude-card-bg, #fff)' }
+                          ? {
+                              overflow: 'auto',
+                              backgroundColor: 'var(--color-background-secondary)',
+                            }
                           : isFullscreen
-                            ? { backgroundColor: 'var(--claude-bg, #f3f0e8)' }
-                            : {}),
+                            ? {
+                                overflow: 'auto',
+                                backgroundColor: 'var(--color-background-primary)',
+                              }
+                            : { backgroundColor: 'transparent' }),
                         opacity: isTransitioning ? 0 : 1,
                         transition: isTransitioning ? 'none' : 'opacity 100ms',
                       }}
@@ -248,7 +248,7 @@ export function ClaudeConversation({
 
         {/* Input area */}
         {!isFullscreen && (
-          <footer style={{ backgroundColor: 'var(--claude-bg, #f3f0e8)' }}>
+          <footer style={{ backgroundColor: 'var(--color-background-primary)' }}>
             <div className="max-w-[48rem] mx-auto px-4 py-4">
               <div className="relative">
                 <input
@@ -258,8 +258,8 @@ export function ClaudeConversation({
                   placeholder="Reply to sunpeak..."
                   className="w-full rounded-xl px-4 py-2.5 text-sm"
                   style={{
-                    backgroundColor: 'var(--claude-input-bg, #fff)',
-                    border: '1px solid var(--claude-border, #e0ddd5)',
+                    backgroundColor: 'var(--color-background-secondary)',
+                    border: '1px solid var(--color-border-primary)',
                   }}
                 />
               </div>

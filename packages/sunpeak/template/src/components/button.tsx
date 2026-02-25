@@ -19,48 +19,47 @@ const sizeClasses: Record<ButtonSize, string> = {
   lg: 'h-10 px-4 text-base gap-2',
 };
 
-// Colors reference CSS variables from the ChatGPT theme bundled with sunpeak,
-// which are available in the template's iframe via sunpeak/chatgpt/globals.css.
+// Colors use MCP standard CSS variables (--color-*) provided by the host.
 const variantColorClasses: Record<ButtonVariant, Record<ButtonColor, string>> = {
   solid: {
     primary:
-      'bg-[var(--color-background-primary-solid)] hover:bg-[var(--color-background-primary-solid-hover)] active:bg-[var(--color-background-primary-solid-active)] text-[var(--color-text-primary-solid)]',
+      'bg-[var(--color-background-inverse)] text-[var(--color-text-inverse)] hover:opacity-85 active:opacity-75',
     secondary:
-      'bg-[var(--color-background-secondary-solid)] hover:bg-[var(--color-background-secondary-solid-hover)] active:bg-[var(--color-background-secondary-solid-active)] text-[var(--color-text-secondary-solid)]',
+      'bg-[var(--color-background-tertiary)] text-[var(--color-text-primary)] hover:opacity-80 active:opacity-70',
     warning:
-      'bg-[var(--color-background-warning-solid)] hover:bg-[var(--color-background-warning-solid-hover)] active:bg-[var(--color-background-warning-solid-active)] text-[var(--color-text-warning-solid)]',
+      'bg-[var(--color-text-warning)] text-white hover:opacity-85 active:opacity-75',
     danger:
-      'bg-[var(--color-background-danger-solid)] hover:bg-[var(--color-background-danger-solid-hover)] active:bg-[var(--color-background-danger-solid-active)] text-[var(--color-text-danger-solid)]',
+      'bg-[var(--color-text-danger)] text-white hover:opacity-85 active:opacity-75',
   },
   soft: {
     primary:
-      'bg-[var(--color-background-primary-soft-alpha)] hover:bg-[var(--color-background-primary-soft-alpha-hover)] active:bg-[var(--color-background-primary-soft-alpha-active)] text-[var(--color-text-primary-soft)]',
+      'bg-[var(--color-background-info)] text-[var(--color-text-info)] hover:opacity-75 active:opacity-65',
     secondary:
-      'bg-[var(--color-background-secondary-soft-alpha)] hover:bg-[var(--color-background-secondary-soft-alpha-hover)] active:bg-[var(--color-background-secondary-soft-alpha-active)] text-[var(--color-text-secondary-soft)]',
+      'bg-[var(--color-background-secondary)] text-[var(--color-text-primary)] hover:opacity-80 active:opacity-70',
     warning:
-      'bg-[var(--color-background-warning-soft-alpha)] hover:bg-[var(--color-background-warning-soft-alpha-hover)] active:bg-[var(--color-background-warning-soft-alpha-active)] text-[var(--color-text-warning-soft)]',
+      'bg-[var(--color-background-warning)] text-[var(--color-text-warning)] hover:opacity-75 active:opacity-65',
     danger:
-      'bg-[var(--color-background-danger-soft-alpha)] hover:bg-[var(--color-background-danger-soft-alpha-hover)] active:bg-[var(--color-background-danger-soft-alpha-active)] text-[var(--color-text-danger-soft)]',
+      'bg-[var(--color-background-danger)] text-[var(--color-text-danger)] hover:opacity-75 active:opacity-65',
   },
   ghost: {
     primary:
-      'bg-transparent hover:bg-[var(--color-background-primary-ghost-hover)] active:bg-[var(--color-background-primary-ghost-active)] text-[var(--color-text-primary-ghost)]',
+      'bg-transparent text-[var(--color-text-info)] hover:bg-[var(--color-background-secondary)] active:bg-[var(--color-background-tertiary)]',
     secondary:
-      'bg-transparent hover:bg-[var(--color-background-secondary-ghost-hover)] active:bg-[var(--color-background-secondary-ghost-active)] text-[var(--color-text-secondary-ghost)]',
+      'bg-transparent text-[var(--color-text-secondary)] hover:bg-[var(--color-background-secondary)] active:bg-[var(--color-background-tertiary)]',
     warning:
-      'bg-transparent hover:bg-[var(--color-background-warning-ghost-hover)] active:bg-[var(--color-background-warning-ghost-active)] text-[var(--color-text-warning-ghost)]',
+      'bg-transparent text-[var(--color-text-warning)] hover:bg-[var(--color-background-warning)] active:bg-[var(--color-background-tertiary)]',
     danger:
-      'bg-transparent hover:bg-[var(--color-background-danger-ghost-hover)] active:bg-[var(--color-background-danger-ghost-active)] text-[var(--color-text-danger-ghost)]',
+      'bg-transparent text-[var(--color-text-danger)] hover:bg-[var(--color-background-danger)] active:bg-[var(--color-background-tertiary)]',
   },
   outline: {
     primary:
-      'bg-transparent border border-[var(--color-border-primary-outline)] hover:bg-[var(--color-background-primary-outline-hover)] hover:border-[var(--color-border-primary-outline-hover)] active:bg-[var(--color-background-primary-outline-active)] text-[var(--color-text-primary-outline)] hover:text-[var(--color-text-primary-outline-hover)]',
+      'bg-transparent border border-[var(--color-border-primary)] text-[var(--color-text-info)] hover:bg-[var(--color-background-secondary)]',
     secondary:
-      'bg-transparent border border-[var(--color-border-secondary-outline)] hover:bg-[var(--color-background-secondary-outline-hover)] hover:border-[var(--color-border-secondary-outline-hover)] active:bg-[var(--color-background-secondary-outline-active)] text-[var(--color-text-secondary-outline)] hover:text-[var(--color-text-secondary-outline-hover)]',
+      'bg-transparent border border-[var(--color-border-primary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-background-secondary)]',
     warning:
-      'bg-transparent border border-[var(--color-border-warning-outline)] hover:bg-[var(--color-background-warning-outline-hover)] hover:border-[var(--color-border-warning-outline-hover)] active:bg-[var(--color-background-warning-outline-active)] text-[var(--color-text-warning-outline)] hover:text-[var(--color-text-warning-outline-hover)]',
+      'bg-transparent border border-[var(--color-border-warning)] text-[var(--color-text-warning)] hover:bg-[var(--color-background-warning)]',
     danger:
-      'bg-transparent border border-[var(--color-border-danger-outline)] hover:bg-[var(--color-background-danger-outline-hover)] hover:border-[var(--color-border-danger-outline-hover)] active:bg-[var(--color-background-danger-outline-active)] text-[var(--color-text-danger-outline)] hover:text-[var(--color-text-danger-outline-hover)]',
+      'bg-transparent border border-[var(--color-border-danger)] text-[var(--color-text-danger)] hover:bg-[var(--color-background-danger)]',
   },
 };
 

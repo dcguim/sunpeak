@@ -33,8 +33,10 @@ export const AlbumCard = React.forwardRef<HTMLButtonElement, AlbumCardProps>(
           />
         </div>
         <div className="flex-shrink-0 w-full p-2">
-          <div className="text-base font-normal text-primary">{album.title}</div>
-          <div className="text-sm text-secondary">
+          <div className="text-base font-normal text-[var(--color-text-primary)]">
+            {album.title}
+          </div>
+          <div className="text-sm text-[var(--color-text-secondary)]">
             {album.photos.length} {album.photos.length === 1 ? 'photo' : 'photos'}
           </div>
         </div>
