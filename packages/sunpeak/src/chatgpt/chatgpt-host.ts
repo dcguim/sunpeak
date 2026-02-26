@@ -55,4 +55,10 @@ registerHostShell({
   hostInfo: CHATGPT_HOST_INFO,
   hostCapabilities: CHATGPT_HOST_CAPABILITIES,
   styleVariables: CHATGPT_STYLE_VARIABLES,
+  pageStyles: {
+    '--sim-bg-sidebar': 'light-dark(#f9f9f9, #181818)',
+    '--sim-bg-conversation': 'light-dark(#ffffff, #212121)',
+    '--sim-bg-user-bubble': 'light-dark(#f4f4f4, #303030)',
+    '--sim-bg-reply-input': 'light-dark(#ffffff, #303030)',
+  },
 });

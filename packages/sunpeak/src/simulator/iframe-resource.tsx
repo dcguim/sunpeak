@@ -228,6 +228,25 @@ function injectPaintFence(iframe: HTMLIFrameElement): void {
 }
 
 /**
+ * Inject a background-color rule into an iframe's document.
+ * For src-mode iframes (Vite dev) the simulator doesn't control the HTML,
+ * so we inject the rule after load. The scriptSrc-mode generated HTML
+ * already includes this rule in its <style> tag.
+ */
+function injectBackgroundRule(iframe: HTMLIFrameElement): void {
+  try {
+    const doc = iframe.contentDocument;
+    if (!doc || doc.querySelector('style[data-sunpeak-bg]')) return;
+    const style = doc.createElement('style');
+    style.setAttribute('data-sunpeak-bg', '');
+    style.textContent = 'html { background-color: var(--color-background-primary, transparent); }';
+    doc.head.appendChild(style);
+  } catch {
+    // Cross-origin iframe — contentDocument access blocked
+  }
+}
+
+/**
  * Generates HTML wrapper for a script URL.
  * The MCP Apps SDK in the loaded script handles communication via PostMessageTransport.
  */
@@ -257,7 +276,12 @@ function generateScriptHtml(
          applyDocumentTheme() takes over with an inline style. */
       color-scheme: ${safeTheme};
     }
-    html, body, #root {
+    html {
+      /* Use the MCP App background variable once JS sets it, otherwise
+         transparent so the host's own background shows through. */
+      background-color: var(--color-background-primary, transparent);
+    }
+    body, #root {
       margin: 0;
       padding: 0;
       width: 100%;
@@ -391,6 +415,15 @@ export function IframeResource({
   // Track whether we've received an initial size report
   const hasReceivedSizeRef = useRef(false);
 
+  // Track current display mode so the stable onSizeChanged callback can
+  // skip auto-resizing in fullscreen (where the host container is fixed).
+  const displayModeRef = useRef(hostContext?.displayMode);
+  displayModeRef.current = hostContext?.displayMode;
+
+  // Remember the last content-driven height so we can restore it when
+  // leaving fullscreen (the app won't re-report until content changes).
+  const lastContentHeightRef = useRef<number | null>(null);
+
   // Create the MCP Apps host
   const host = useMemo(
     () =>
@@ -399,6 +432,13 @@ export function IframeResource({
         ...hostOptions,
         onSizeChanged: (params) => {
           hostOptions?.onSizeChanged?.(params);
+          if (params.height != null) {
+            lastContentHeightRef.current = params.height;
+          }
+          // Skip auto-resizing in fullscreen mode where the host provides a
+          // fixed container — auto-sizing would create a feedback loop with
+          // viewport-relative units like dvh. PIP and inline use content-driven sizing.
+          if (displayModeRef.current === 'fullscreen') return;
           if (iframeRef.current && params.height != null) {
             hasReceivedSizeRef.current = true;
             iframeRef.current.style.height = `${params.height}px`;
@@ -433,6 +473,7 @@ export function IframeResource({
   const handleLoad = useCallback(() => {
     if (src && iframeRef.current) {
       injectPaintFence(iframeRef.current);
+      injectBackgroundRule(iframeRef.current);
     }
     // Inject mock ChatGPT runtime for src-mode iframes after page load.
     // For srcdoc mode this is handled by an inline script in the generated HTML.
@@ -452,6 +493,16 @@ export function IframeResource({
   useEffect(() => {
     if (hostContext) {
       host.setHostContext(hostContext);
+    }
+    // In fullscreen the host provides a fixed container, so the iframe
+    // should fill it. When leaving fullscreen, restore the last content-driven
+    // height so the iframe isn't stuck at 100% or collapsed.
+    if (iframeRef.current) {
+      if (hostContext?.displayMode === 'fullscreen') {
+        iframeRef.current.style.height = '100%';
+      } else if (lastContentHeightRef.current != null) {
+        iframeRef.current.style.height = `${lastContentHeightRef.current}px`;
+      }
     }
   }, [host, hostContext]);
 

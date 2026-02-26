@@ -37,7 +37,7 @@ function applyClaudeTheme(theme: 'light' | 'dark'): void {
 const CLAUDE_STYLE_VARIABLES = {
   ...DEFAULT_STYLE_VARIABLES,
   // Background colors — warm beige/cream palette
-  '--color-background-primary': 'light-dark(#f3f0e8, #2b2a27)',
+  '--color-background-primary': 'light-dark(#faf9f5, #262624)',
   '--color-background-secondary': 'light-dark(#ffffff, #3a3935)',
   '--color-background-tertiary': 'light-dark(#e8e4dc, #4a4843)',
   '--color-background-inverse': 'light-dark(#2b2a27, #f3f0e8)',
@@ -60,4 +60,10 @@ registerHostShell({
   hostInfo: CLAUDE_HOST_INFO,
   hostCapabilities: CLAUDE_HOST_CAPABILITIES,
   styleVariables: CLAUDE_STYLE_VARIABLES,
+  pageStyles: {
+    '--sim-bg-sidebar': 'light-dark(#f9f8f3, #252523)',
+    '--sim-bg-conversation': 'light-dark(#faf9f5, #262624)',
+    '--sim-bg-user-bubble': 'light-dark(#f1eee6, #141413)',
+    '--sim-bg-reply-input': 'light-dark(#ffffff, #30302e)',
+  },
 });

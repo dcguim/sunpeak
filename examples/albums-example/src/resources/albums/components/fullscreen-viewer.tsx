@@ -44,7 +44,7 @@ export function FullscreenViewer({ album, className }: FullscreenViewerProps) {
     <SafeArea
       ref={containerRef}
       className={cn(
-        'min-h-dvh flex w-full bg-[var(--color-background-primary)]',
+        'h-full flex w-full bg-[var(--color-background-primary)]',
         isMobile ? 'flex-col' : 'flex-row',
         className
       )}

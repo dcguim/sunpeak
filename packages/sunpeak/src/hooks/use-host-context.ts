@@ -1,11 +1,12 @@
 import { useCallback, useSyncExternalStore } from 'react';
-import type { App, McpUiHostContext } from '@modelcontextprotocol/ext-apps';
+import type { App, McpUiHostContext, McpUiStyles } from '@modelcontextprotocol/ext-apps';
 import {
   applyDocumentTheme,
   applyHostStyleVariables,
   applyHostFonts,
 } from '@modelcontextprotocol/ext-apps';
 import { useApp } from './use-app';
+import { DEFAULT_STYLE_VARIABLES } from '../lib/default-style-variables';
 
 /**
  * Per-app subscriber registry.
@@ -18,6 +19,19 @@ import { useApp } from './use-app';
  */
 const registries = new WeakMap<App, Set<() => void>>();
 
+/**
+ * Apply style variables to the document, falling back to defaults.
+ * Host-provided variables override defaults since they're applied after.
+ */
+function applyStyles(variables: McpUiStyles | undefined) {
+  // Always apply defaults first so all CSS variables are defined
+  applyHostStyleVariables(DEFAULT_STYLE_VARIABLES);
+  // Override with host-provided values (if any)
+  if (variables) {
+    applyHostStyleVariables(variables);
+  }
+}
+
 function getRegistry(app: App): Set<() => void> {
   let subs = registries.get(app);
   if (!subs) {
@@ -29,27 +43,22 @@ function getRegistry(app: App): Set<() => void> {
     if (ctx?.theme) {
       applyDocumentTheme(ctx.theme);
     }
-    if (ctx?.styles?.variables) {
-      applyHostStyleVariables(ctx.styles.variables);
-      // Set the document background to match the host's primary background so the
-      // iframe canvas doesn't default to white (browsers paint white behind transparent).
-      document.documentElement.style.backgroundColor = 'var(--color-background-primary)';
-    }
+    applyStyles(ctx?.styles?.variables);
     if (ctx?.styles?.css?.fonts) {
       applyHostFonts(ctx.styles.css.fonts);
     }
 
-    app.onhostcontextchanged = (params) => {
-      // Apply theme and style variables to document when host changes them
-      if (params.theme) {
-        applyDocumentTheme(params.theme);
+    app.onhostcontextchanged = () => {
+      // Read the full context from the app rather than relying on the
+      // callback params, which may be a delta missing unchanged fields
+      // like styles when only the theme toggled.
+      const ctx = app.getHostContext();
+      if (ctx?.theme) {
+        applyDocumentTheme(ctx.theme);
       }
-      if (params.styles?.variables) {
-        applyHostStyleVariables(params.styles.variables);
-        document.documentElement.style.backgroundColor = 'var(--color-background-primary)';
-      }
-      if (params.styles?.css?.fonts) {
-        applyHostFonts(params.styles.css.fonts);
+      applyStyles(ctx?.styles?.variables);
+      if (ctx?.styles?.css?.fonts) {
+        applyHostFonts(ctx.styles.css.fonts);
       }
       for (const fn of subs!) fn();
     };

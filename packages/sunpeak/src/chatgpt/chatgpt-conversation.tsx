@@ -69,7 +69,7 @@ export function Conversation({
       className="flex flex-col w-full h-full flex-1 items-center relative"
       style={{
         transform: 'translate(0)',
-        backgroundColor: 'var(--color-background-primary)',
+        backgroundColor: 'var(--sim-bg-conversation, var(--color-background-primary))',
         color: 'var(--color-text-primary)',
       }}
     >
@@ -83,7 +83,7 @@ export function Conversation({
             className="z-10 grid h-[3.25rem] grid-cols-[1fr_auto_1fr] border-b px-2 pointer-events-auto"
             style={{
               borderColor: 'var(--color-border-primary)',
-              backgroundColor: 'var(--color-background-primary)',
+              backgroundColor: 'var(--sim-bg-conversation, var(--color-background-primary))',
             }}
           >
             <div className="flex items-center justify-start gap-3">
@@ -105,7 +105,9 @@ export function Conversation({
           <div className="flex-1" />
           <footer
             className="pointer-events-auto"
-            style={{ backgroundColor: 'var(--color-background-primary)' }}
+            style={{
+              backgroundColor: 'var(--sim-bg-conversation, var(--color-background-primary))',
+            }}
           >
             <div className="max-w-[48rem] mx-auto px-4 py-4">
               <div className="relative">
@@ -116,7 +118,7 @@ export function Conversation({
                   placeholder="Message sunpeak.ai"
                   className="w-full rounded-3xl px-5 py-3 pr-12 shadow-md"
                   style={{
-                    backgroundColor: 'var(--color-background-secondary)',
+                    backgroundColor: 'var(--sim-bg-reply-input, var(--color-background-secondary))',
                     color: 'var(--color-text-primary)',
                     border: '1px solid var(--color-border-tertiary)',
                   }}
@@ -133,7 +135,7 @@ export function Conversation({
           className="h-12 flex items-center px-4 text-lg sticky top-0 z-40 w-full"
           style={{
             maxWidth: containerWidth,
-            backgroundColor: 'var(--color-background-primary)',
+            backgroundColor: 'var(--sim-bg-conversation, var(--color-background-primary))',
           }}
         >
           <span>sunpeak.ai</span>
@@ -160,7 +162,10 @@ export function Conversation({
                       <div className="flex w-full flex-col gap-1 empty:hidden items-end">
                         <div
                           className="relative rounded-[18px] px-4 py-3 max-w-[70%]"
-                          style={{ backgroundColor: 'var(--color-background-tertiary)' }}
+                          style={{
+                            backgroundColor:
+                              'var(--sim-bg-user-bubble, var(--color-background-tertiary))',
+                          }}
                         >
                           <div className="whitespace-pre-wrap">{userMessage}</div>
                         </div>
@@ -276,7 +281,11 @@ export function Conversation({
 
         {/* Input area - hidden in fullscreen since fullscreen chrome has its own footer */}
         {!isFullscreen && (
-          <footer style={{ backgroundColor: 'var(--color-background-primary)' }}>
+          <footer
+            style={{
+              backgroundColor: 'var(--sim-bg-conversation, var(--color-background-primary))',
+            }}
+          >
             <div className="max-w-[48rem] mx-auto px-4 py-4">
               <div className="relative">
                 <input
@@ -286,7 +295,7 @@ export function Conversation({
                   placeholder="Message sunpeak.ai"
                   className="w-full rounded-3xl px-5 py-3 pr-12 shadow-md"
                   style={{
-                    backgroundColor: 'var(--color-background-secondary)',
+                    backgroundColor: 'var(--sim-bg-reply-input, var(--color-background-secondary))',
                     color: 'var(--color-text-primary)',
                     border: '1px solid var(--color-border-tertiary)',
                   }}

@@ -46,7 +46,7 @@ export function CarouselResource() {
   const places = output?.places ?? [];
 
   return (
-    <SafeArea>
+    <SafeArea className="p-4">
       <Carousel
         gap={16}
         showArrows={true}

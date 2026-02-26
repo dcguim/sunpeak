@@ -60,6 +60,15 @@ export interface HostShell {
    * @see McpUiStyleVariableKey from @modelcontextprotocol/ext-apps
    */
   styleVariables?: McpUiStyles;
+  /**
+   * CSS custom properties for the simulator page chrome (sidebar, conversation area).
+   * These are applied to the document root and can override the defaults:
+   *   --sim-bg-sidebar       (fallback: var(--color-background-secondary))
+   *   --sim-bg-conversation  (fallback: var(--color-background-primary))
+   *
+   * Values should use CSS light-dark() for automatic theme adaptation.
+   */
+  pageStyles?: Record<string, string>;
 }
 
 // ── Host Shell Registry ──────────────────────────────────────────

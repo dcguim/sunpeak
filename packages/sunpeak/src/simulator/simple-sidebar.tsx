@@ -217,7 +217,7 @@ export function SidebarSelect({ value, onChange, options, placeholder }: Sidebar
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="w-full h-7 text-xs rounded-md px-2 outline-none appearance-none bg-no-repeat bg-[length:12px] bg-[right_6px_center]"
+      className="w-full h-7 text-xs rounded-full px-2 outline-none appearance-none bg-no-repeat bg-[length:12px] bg-[right_6px_center]"
       style={{
         ...formElementStyle,
         backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%236b7280'%3e%3cpath d='M4.22 6.22a.75.75 0 0 1 1.06 0L8 8.94l2.72-2.72a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0L4.22 7.28a.75.75 0 0 1 0-1.06Z'/%3e%3c/svg%3e")`,
@@ -353,7 +353,7 @@ interface SidebarToggleProps {
 export function SidebarToggle({ value, onChange, options }: SidebarToggleProps) {
   return (
     <div
-      className="inline-flex w-full rounded-md p-[3px] gap-0.5"
+      className="inline-flex w-full rounded-full p-[3px] gap-0.5"
       style={{ backgroundColor: 'var(--color-background-tertiary)' }}
       role="group"
       aria-label="Toggle options"
@@ -365,7 +365,7 @@ export function SidebarToggle({ value, onChange, options }: SidebarToggleProps) 
             key={option.value}
             onClick={() => onChange(option.value)}
             aria-pressed={isSelected}
-            className="flex-1 text-[10px] font-medium h-[22px] px-2 rounded outline-none transition-all duration-150"
+            className="flex-1 text-[10px] font-medium h-[22px] px-2 rounded-full outline-none transition-all duration-150"
             style={{
               backgroundColor: isSelected ? 'var(--color-background-primary)' : 'transparent',
               color: isSelected ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',

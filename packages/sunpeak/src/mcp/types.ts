@@ -30,6 +30,18 @@ export interface SimulationWithDist {
 }
 
 /**
+ * Handle returned by `runMCPServer` for controlling the running server.
+ */
+export interface MCPServerHandle {
+  /**
+   * Notify non-local sessions that resources have changed.
+   * Sends `notifications/resources/list_changed` so hosts re-fetch fresh content.
+   * Local sessions (ChatGPT, simulator) are skipped since they use Vite HMR.
+   */
+  invalidateResources(): void;
+}
+
+/**
  * Configuration for the MCP server.
  * Takes an array of simulations with distPath for each built HTML file.
  */

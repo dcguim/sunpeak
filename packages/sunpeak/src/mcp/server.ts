@@ -13,9 +13,9 @@ import {
   RESOURCE_MIME_TYPE,
 } from '@modelcontextprotocol/ext-apps/server';
 
-import { type MCPServerConfig, type SimulationWithDist } from './types.js';
+import { type MCPServerConfig, type MCPServerHandle, type SimulationWithDist } from './types.js';
 
-export type { MCPServerConfig, SimulationWithDist } from './types.js';
+export type { MCPServerConfig, MCPServerHandle, SimulationWithDist } from './types.js';
 
 // Dev server URLs for Vite HMR (localhost only — used for direct connections like ChatGPT)
 const LOCAL_DEV_SERVER_URL = 'http://localhost:8000';
@@ -305,7 +305,19 @@ function createAppServer(
 type SessionRecord = {
   server: McpServer;
   transport: SSEServerTransport;
+  /** True for localhost connections (ChatGPT, simulator) — they use Vite HMR. */
+  isLocal: boolean;
 };
+
+/**
+ * Check if the request originates from localhost.
+ * Local connections (ChatGPT, simulator) use Vite HMR and don't need
+ * cache invalidation. Tunnel connections (Claude, other hosts) need it.
+ */
+function isLocalConnection(req: IncomingMessage): boolean {
+  const addr = req.socket.remoteAddress;
+  return addr === '127.0.0.1' || addr === '::1' || addr === '::ffff:127.0.0.1';
+}
 
 const sessions = new Map<string, SessionRecord>();
 
@@ -313,6 +325,7 @@ const ssePath = '/mcp';
 const postPath = '/mcp/messages';
 
 async function handleSseRequest(
+  req: IncomingMessage,
   res: ServerResponse,
   config: MCPServerConfig,
   simulations: SimulationWithDist[],
@@ -322,9 +335,13 @@ async function handleSseRequest(
   const server = createAppServer(config, simulations, viteMode);
   const transport = new SSEServerTransport(postPath, res);
   const sessionId = transport.sessionId;
+  const isLocal = isLocalConnection(req);
 
-  sessions.set(sessionId, { server, transport });
-  console.log(`[MCP] Session started: ${sessionId.substring(0, 8)}... (${sessions.size} active)`);
+  sessions.set(sessionId, { server, transport, isLocal });
+  const origin = isLocal ? 'local' : 'tunnel';
+  console.log(
+    `[MCP] Session started: ${sessionId.substring(0, 8)}... (${origin}, ${sessions.size} active)`
+  );
 
   transport.onclose = async () => {
     // Guard against re-entrancy (server.close() may trigger onclose again)
@@ -418,8 +435,9 @@ interface ViteDevServer {
  * Run the MCP server with the specified configuration.
  *
  * @param config - Server configuration with simulations.
+ * @returns Handle for controlling the running server (e.g. cache invalidation).
  */
-export function runMCPServer(config: MCPServerConfig): void {
+export function runMCPServer(config: MCPServerConfig): MCPServerHandle {
   const portEnv = Number(process.env.PORT ?? 8000);
   const port = config.port ?? (Number.isFinite(portEnv) ? portEnv : 8000);
   const { simulations } = config;
@@ -480,7 +498,7 @@ export function runMCPServer(config: MCPServerConfig): void {
     // MCP SSE endpoint
     if (req.method === 'GET' && url.pathname === ssePath) {
       console.log(`[HTTP] ${req.method} ${url.pathname}`);
-      await handleSseRequest(res, config, simulations, viteMode);
+      await handleSseRequest(req, res, config, simulations, viteMode);
       return;
     }
 
@@ -544,4 +562,19 @@ export function runMCPServer(config: MCPServerConfig): void {
 
   process.on('SIGTERM', () => void shutdown());
   process.on('SIGINT', () => void shutdown());
+
+  return {
+    invalidateResources() {
+      let notified = 0;
+      for (const [, session] of sessions) {
+        if (!session.isLocal) {
+          session.server.sendResourceListChanged();
+          notified++;
+        }
+      }
+      if (notified > 0) {
+        console.log(`[MCP] Notified ${notified} session(s) of resource changes`);
+      }
+    },
+  };
 }

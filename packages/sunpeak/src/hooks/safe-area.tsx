@@ -36,10 +36,12 @@ export const SafeArea = forwardRef<HTMLDivElement, SafeAreaProps>(function SafeA
     <div
       ref={ref}
       style={{
-        paddingTop: safeArea.top,
-        paddingBottom: safeArea.bottom,
-        paddingLeft: safeArea.left,
-        paddingRight: safeArea.right,
+        // Only set inline padding when safe-area insets are non-zero,
+        // so CSS class padding (e.g. Tailwind `p-4`) can serve as defaults.
+        paddingTop: safeArea.top || undefined,
+        paddingBottom: safeArea.bottom || undefined,
+        paddingLeft: safeArea.left || undefined,
+        paddingRight: safeArea.right || undefined,
         maxHeight: viewport?.maxHeight,
         ...style,
       }}

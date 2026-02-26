@@ -72,7 +72,7 @@ export function ClaudeConversation({
       className="flex flex-col w-full h-full flex-1 items-center relative"
       style={{
         transform: 'translate(0)',
-        backgroundColor: 'var(--color-background-primary)',
+        backgroundColor: 'var(--sim-bg-conversation, var(--color-background-primary))',
         color: 'var(--color-text-primary)',
       }}
     >
@@ -86,7 +86,7 @@ export function ClaudeConversation({
             className="z-10 flex items-center h-12 border-b px-3 pointer-events-auto"
             style={{
               borderColor: 'var(--color-border-primary)',
-              backgroundColor: 'var(--color-background-primary)',
+              backgroundColor: 'var(--sim-bg-conversation, var(--color-background-primary))',
             }}
           >
             <button
@@ -103,7 +103,9 @@ export function ClaudeConversation({
           <div className="flex-1" />
           <footer
             className="pointer-events-auto p-3"
-            style={{ backgroundColor: 'var(--color-background-primary)' }}
+            style={{
+              backgroundColor: 'var(--sim-bg-conversation, var(--color-background-primary))',
+            }}
           >
             <div className="max-w-[48rem] mx-auto">
               <input
@@ -113,7 +115,7 @@ export function ClaudeConversation({
                 placeholder="Reply to sunpeak..."
                 className="w-full rounded-xl px-4 py-2.5 text-sm"
                 style={{
-                  backgroundColor: 'var(--color-background-secondary)',
+                  backgroundColor: 'var(--sim-bg-reply-input, var(--color-background-secondary))',
                   border: '1px solid var(--color-border-primary)',
                   color: 'var(--color-text-primary)',
                 }}
@@ -129,7 +131,7 @@ export function ClaudeConversation({
           className="h-12 flex items-center px-4 text-sm font-medium sticky top-0 z-40 w-full"
           style={{
             maxWidth: containerWidth,
-            backgroundColor: 'var(--color-background-primary)',
+            backgroundColor: 'var(--sim-bg-conversation, var(--color-background-primary))',
           }}
         >
           <span>sunpeak.ai</span>
@@ -150,7 +152,8 @@ export function ClaudeConversation({
                   <div
                     className="inline-block rounded-2xl px-4 py-2.5 text-sm max-w-[85%]"
                     style={{
-                      backgroundColor: 'var(--color-background-tertiary)',
+                      backgroundColor:
+                        'var(--sim-bg-user-bubble, var(--color-background-tertiary))',
                     }}
                   >
                     {userMessage}
@@ -248,7 +251,11 @@ export function ClaudeConversation({
 
         {/* Input area */}
         {!isFullscreen && (
-          <footer style={{ backgroundColor: 'var(--color-background-primary)' }}>
+          <footer
+            style={{
+              backgroundColor: 'var(--sim-bg-conversation, var(--color-background-primary))',
+            }}
+          >
             <div className="max-w-[48rem] mx-auto px-4 py-4">
               <div className="relative">
                 <input
@@ -258,7 +265,7 @@ export function ClaudeConversation({
                   placeholder="Reply to sunpeak..."
                   className="w-full rounded-xl px-4 py-2.5 text-sm"
                   style={{
-                    backgroundColor: 'var(--color-background-secondary)',
+                    backgroundColor: 'var(--sim-bg-reply-input, var(--color-background-secondary))',
                     border: '1px solid var(--color-border-primary)',
                   }}
                 />

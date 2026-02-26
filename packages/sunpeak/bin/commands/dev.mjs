@@ -62,7 +62,7 @@ async function importFromProject(require, moduleName) {
  *
  * When a file changes during a build, the current build is killed and restarted.
  */
-function startBuildWatcher(projectRoot, resourcesDir) {
+function startBuildWatcher(projectRoot, resourcesDir, mcpHandle) {
   let activeChild = null;
   const sunpeakBin = join(dirname(new URL(import.meta.url).pathname), '..', 'sunpeak.js');
 
@@ -84,7 +84,10 @@ function startBuildWatcher(projectRoot, resourcesDir) {
     child.on('exit', (code) => {
       if (child !== activeChild) return; // Superseded by a newer build
       activeChild = null;
-      if (code !== 0 && code !== null) {
+      if (code === 0) {
+        // Notify non-local sessions (Claude, etc.) that resources changed
+        mcpHandle?.invalidateResources();
+      } else if (code !== null) {
         console.error(`[build] Failed (exit ${code})`);
       }
     });
@@ -341,7 +344,7 @@ if (import.meta.hot) {
     }
 
     const pkg = JSON.parse(readFileSync(pkgJsonPath, 'utf-8'));
-    runMCPServer({
+    const mcpHandle = runMCPServer({
       name: pkg.name || 'Sunpeak',
       version: pkg.version || '0.1.0',
       simulations,
@@ -353,7 +356,8 @@ if (import.meta.hot) {
     // Tunnel clients (e.g. Claude via ngrok) get the pre-built HTML since they can't
     // reach the local Vite dev server. The watcher rebuilds on source file changes
     // so the prod output stays fresh without manual `sunpeak build`.
-    startBuildWatcher(projectRoot, resourcesDir);
+    // On successful builds, mcpHandle.invalidateResources() notifies tunnel sessions.
+    startBuildWatcher(projectRoot, resourcesDir, mcpHandle);
 
     // Handle signals - close both servers
     process.on('SIGINT', async () => {

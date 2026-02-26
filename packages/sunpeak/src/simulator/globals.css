@@ -10,9 +10,9 @@
 /* Configure dark mode to use data-theme attribute */
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
-/* Sidebar utility */
+/* Sidebar utility — host-overridable via --sim-bg-sidebar */
 @utility bg-sidebar {
-  background-color: var(--color-background-secondary);
+  background-color: var(--sim-bg-sidebar, var(--color-background-secondary));
 }
 
 /* Sidebar form elements — match SDK look */

@@ -24,7 +24,7 @@ export const resource: ResourceConfig = {
  */
 export function AlbumsResource() {
   return (
-    <SafeArea>
+    <SafeArea className="p-4">
       <Albums />
     </SafeArea>
   );

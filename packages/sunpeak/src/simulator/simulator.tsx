@@ -70,6 +70,27 @@ export function Simulator({
     }
   }, [activeShell]);
 
+  // Apply host page styles (simulator chrome backgrounds, etc.) to the document root.
+  // Cleans up old properties when switching hosts so stale values don't persist.
+  const prevPageStyleKeysRef = React.useRef<string[]>([]);
+  React.useEffect(() => {
+    const root = document.documentElement;
+    for (const key of prevPageStyleKeysRef.current) {
+      root.style.removeProperty(key);
+    }
+    const pageStyles = activeShell?.pageStyles;
+    if (pageStyles) {
+      const keys: string[] = [];
+      for (const [key, value] of Object.entries(pageStyles)) {
+        root.style.setProperty(key, value);
+        keys.push(key);
+      }
+      prevPageStyleKeysRef.current = keys;
+    } else {
+      prevPageStyleKeysRef.current = [];
+    }
+  }, [activeShell]);
+
   // Build content
   let content: React.ReactNode;
   if (state.resourceUrl) {
@@ -403,7 +424,7 @@ export function Simulator({
               </button>
             </SidebarCollapsibleControl>
 
-            <SidebarCollapsibleControl label="Tool Result (JSON)">
+            <SidebarCollapsibleControl label="Tool Result (JSON)" defaultCollapsed={false}>
               <SidebarTextarea
                 value={state.toolResultJson}
                 onChange={(json) =>
