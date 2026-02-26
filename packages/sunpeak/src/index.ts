@@ -7,6 +7,7 @@ export {
   PostMessageTransport,
   RESOURCE_MIME_TYPE,
   RESOURCE_URI_META_KEY,
+  LATEST_PROTOCOL_VERSION,
   applyHostStyleVariables,
   applyHostFonts,
   applyDocumentTheme,

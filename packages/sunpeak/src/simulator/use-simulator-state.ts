@@ -3,6 +3,7 @@ import type {
   McpUiHostContext,
   McpUiDisplayMode,
   McpUiTheme,
+  McpUiResourcePermissions,
 } from '@modelcontextprotocol/ext-apps';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import type { Simulation } from '../types/simulation';
@@ -55,6 +56,10 @@ export interface SimulatorState {
   setSafeAreaInsets: React.Dispatch<
     React.SetStateAction<{ top: number; bottom: number; left: number; right: number }>
   >;
+  timeZone: string;
+  setTimeZone: (tz: string) => void;
+  userAgent: string;
+  setUserAgent: (ua: string) => void;
 
   // ── Computed host context ──
   hostContext: McpUiHostContext;
@@ -107,10 +112,17 @@ export interface SimulatorState {
   handleDisplayModeChange: (mode: McpUiDisplayMode) => void;
   handleUpdateModelContext: (content: unknown[], structuredContent?: unknown) => void;
 
+  // ── Streaming tool input ──
+  toolInputPartial: Record<string, unknown> | undefined;
+  sendToolInputPartial: () => void;
+
   // ── Content props (for IframeResource) ──
   resourceUrl: string | undefined;
   resourceScript: string | undefined;
   csp: ResourceCSP | undefined;
+  permissions: McpUiResourcePermissions | undefined;
+  prefersBorder: boolean;
+  domain: string | undefined;
   hasIframeContent: boolean;
 }
 
@@ -238,6 +250,10 @@ export function useSimulatorState({
   const [safeAreaInsets, setSafeAreaInsets] = useState(
     urlParams.safeAreaInsets ?? { top: 0, bottom: 0, left: 0, right: 0 }
   );
+  const [timeZone, setTimeZone] = useState(() => Intl.DateTimeFormat().resolvedOptions().timeZone);
+  const [userAgent, setUserAgent] = useState(() =>
+    typeof navigator !== 'undefined' ? navigator.userAgent : ''
+  );
 
   // Display mode setter that respects mobile width constraints
   const setDisplayMode = (mode: McpUiDisplayMode) => {
@@ -263,12 +279,25 @@ export function useSimulatorState({
       theme,
       displayMode,
       locale,
+      timeZone,
+      userAgent,
       platform,
       deviceCapabilities: { hover, touch },
       safeAreaInsets,
       ...(displayMode === 'pip' ? { containerDimensions: { maxHeight: containerMaxHeight } } : {}),
     }),
-    [theme, displayMode, locale, platform, hover, touch, safeAreaInsets, containerMaxHeight]
+    [
+      theme,
+      displayMode,
+      locale,
+      timeZone,
+      userAgent,
+      platform,
+      hover,
+      touch,
+      safeAreaInsets,
+      containerMaxHeight,
+    ]
   );
 
   // ── Tool data state ──
@@ -386,8 +415,30 @@ export function useSimulatorState({
   const resourceUrl = selectedSim?.resourceUrl;
   const resourceScript = selectedSim?.resourceScript;
   const csp = selectedSim ? extractResourceCSP(selectedSim.resource) : undefined;
+  const resourceMeta = (selectedSim?.resource._meta as Record<string, unknown> | undefined)?.ui as
+    | { permissions?: McpUiResourcePermissions; prefersBorder?: boolean; domain?: string }
+    | undefined;
+  const permissions = resourceMeta?.permissions;
+  const prefersBorder = resourceMeta?.prefersBorder ?? false;
+  const domain = resourceMeta?.domain;
   const hasIframeContent = !!(resourceUrl || resourceScript);
   const isTransitioning = hasIframeContent && displayMode !== readyDisplayMode;
+
+  // ── Streaming tool input partial ──
+  const [toolInputPartial, setToolInputPartial] = useState<Record<string, unknown> | undefined>(
+    undefined
+  );
+
+  const sendToolInputPartial = useCallback(() => {
+    try {
+      const parsed = JSON.parse(toolInputJson);
+      if (parsed && typeof parsed === 'object') {
+        setToolInputPartial(parsed as Record<string, unknown>);
+      }
+    } catch {
+      // Invalid JSON, ignore
+    }
+  }, [toolInputJson]);
 
   return {
     simulationNames,
@@ -417,6 +468,10 @@ export function useSimulatorState({
     setTouch,
     safeAreaInsets,
     setSafeAreaInsets,
+    timeZone,
+    setTimeZone,
+    userAgent,
+    setUserAgent,
 
     hostContext,
 
@@ -454,9 +509,15 @@ export function useSimulatorState({
     handleDisplayModeChange,
     handleUpdateModelContext,
 
+    toolInputPartial,
+    sendToolInputPartial,
+
     resourceUrl,
     resourceScript,
     csp,
+    permissions,
+    prefersBorder,
+    domain,
     hasIframeContent,
   };
 }

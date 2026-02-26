@@ -45,15 +45,16 @@ function MyResource() {
 
 ### Action Hooks
 
-sunpeak provides individual hooks for interacting with the host runtime, including calling MCP tools, sending messages, and opening links.
+sunpeak provides individual hooks for interacting with the host runtime, including calling MCP tools, sending messages, opening links, and pushing model context updates.
 
 ```tsx
-import { useCallServerTool, useSendMessage, useOpenLink } from 'sunpeak';
+import { useCallServerTool, useSendMessage, useOpenLink, useUpdateModelContext } from 'sunpeak';
 
 function MyResource() {
   const callTool = useCallServerTool();
   const sendMessage = useSendMessage();
   const openLink = useOpenLink();
+  const updateModelContext = useUpdateModelContext();
 
   const handleAction = async () => {
     // Call an MCP tool.
@@ -64,14 +65,84 @@ function MyResource() {
 
     // Open an external URL.
     await openLink({ url: 'https://sunpeak.ai' });
+
+    // Push structured data to the model's context.
+    await updateModelContext({ structuredContent: { selectedItem: 'abc' } });
   };
 
   return <button onClick={handleAction}>Interact with Host</button>;
 }
 ```
 
+### Bidirectional Tool Calling
+
+Apps can also register tools that the host can call, enabling two-way communication:
+
+```tsx
+import { useAppTools } from 'sunpeak';
+
+function MyResource() {
+  useAppTools({
+    tools: [{ name: 'get-selection', description: 'Get the current selection' }],
+    onCallTool: async ({ name }) => {
+      if (name === 'get-selection') {
+        return { content: [{ type: 'text', text: selectedText }] };
+      }
+      return { content: [], isError: true };
+    },
+  });
+}
+```
+
+## ChatGPT-Specific Hooks
+
+Some ChatGPT features go beyond the MCP Apps standard. sunpeak provides typed hooks for these platform-specific APIs, imported from `sunpeak/platform/chatgpt`:
+
+```tsx
+import { isChatGPT } from 'sunpeak/platform';
+import { useUploadFile, useRequestModal, useRequestCheckout } from 'sunpeak/platform/chatgpt';
+
+function MyResource() {
+  if (!isChatGPT()) {
+    return <div>Standard MCP App UI</div>;
+  }
+
+  return <ChatGPTFeatures />;
+}
+
+function ChatGPTFeatures() {
+  const uploadFile = useUploadFile();
+  const requestModal = useRequestModal();
+  const requestCheckout = useRequestCheckout();
+
+  return (
+    <div>
+      <button onClick={() => uploadFile(new File([], 'photo.png'))}>Upload</button>
+      <button onClick={() => requestModal({})}>Open Modal</button>
+    </div>
+  );
+}
+```
+
+| Hook | Description |
+|------|-------------|
+| `useUploadFile` | Upload files into the ChatGPT conversation |
+| `useGetFileDownloadUrl` | Get temporary download URLs for uploaded files |
+| `useRequestModal` | Open a host-controlled modal |
+| `useRequestCheckout` | Trigger the instant checkout flow |
+
+<Warning>
+These hooks throw if called outside ChatGPT. Always feature-detect with `isChatGPT()` first. See [Platform Detection](/api-reference/hooks/platform-detection).
+</Warning>
+
 ## Dive Deeper
 
 <Card horizontal title="Runtime API Reference" icon="code" href="/api-reference/hooks/use-app">
   All hooks provided by sunpeak.
+</Card>
+<Card horizontal title="ChatGPT Hooks" icon="bolt" href="/api-reference/hooks/chatgpt-hooks">
+  ChatGPT-specific hook API reference.
+</Card>
+<Card horizontal title="Platform Detection" icon="radar" href="/api-reference/hooks/platform-detection">
+  Detect which host platform is running your app.
 </Card>

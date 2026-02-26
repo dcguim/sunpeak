@@ -1,0 +1,132 @@
+---
+title: "Platform Detection"
+description: "Detect which host platform is running your MCP App."
+---
+
+## Overview
+
+Platform detection utilities help you identify which host platform (ChatGPT, Claude, etc.) is running your app, so you can conditionally use platform-specific features.
+
+## Import
+
+```tsx
+import { detectPlatform, isChatGPT, isClaude } from 'sunpeak/platform';
+```
+
+## detectPlatform
+
+Detect the current host platform.
+
+### Signature
+
+```tsx
+function detectPlatform(): Platform
+```
+
+### Platform Type
+
+```tsx
+type Platform = 'chatgpt' | 'claude' | 'unknown';
+```
+
+### Detection Order
+
+1. **Runtime objects** — checks for `window.openai` (injected by ChatGPT and by the simulator when ChatGPT host is selected)
+2. **User agent** — checks `navigator.userAgent` for platform identifiers
+3. **Hostname** — checks `window.location.hostname` for known host domains
+
+### Usage
+
+```tsx
+import { detectPlatform } from 'sunpeak/platform';
+
+function MyResource() {
+  const platform = detectPlatform();
+
+  switch (platform) {
+    case 'chatgpt':
+      return <ChatGPTFeatures />;
+    case 'claude':
+      return <ClaudeFeatures />;
+    default:
+      return <GenericUI />;
+  }
+}
+```
+
+---
+
+## isChatGPT
+
+Check if the app is running in a ChatGPT host.
+
+### Signature
+
+```tsx
+function isChatGPT(): boolean
+```
+
+### Usage
+
+```tsx
+import { isChatGPT } from 'sunpeak/platform';
+import { useUploadFile } from 'sunpeak/platform/chatgpt';
+
+function MyResource() {
+  if (!isChatGPT()) {
+    return <p>Upload requires ChatGPT.</p>;
+  }
+  return <Uploader />;
+}
+
+function Uploader() {
+  const uploadFile = useUploadFile();
+  // ...
+}
+```
+
+---
+
+## isClaude
+
+Check if the app is running in a Claude host.
+
+### Signature
+
+```tsx
+function isClaude(): boolean
+```
+
+### Usage
+
+```tsx
+import { isClaude } from 'sunpeak/platform';
+
+function MyResource() {
+  if (isClaude()) {
+    // Claude-specific behavior
+  }
+}
+```
+
+---
+
+## Simulator Behavior
+
+In the [Simulator](/api-reference/simulations/simulator), platform detection reflects the currently selected host:
+
+| Host selected | `isChatGPT()` | `isClaude()` | `detectPlatform()` |
+|---|---|---|---|
+| ChatGPT | `true` | `false` | `'chatgpt'` |
+| Claude | `false` | `false`* | `'unknown'`* |
+
+\* Claude detection relies on user agent or hostname, which aren't present in the simulator. Use [`useHostContext()`](/api-reference/hooks/use-host-context) to read host identity from the MCP protocol instead.
+
+## See Also
+
+<Card horizontal title="ChatGPT Hooks" icon="bolt" href="/api-reference/hooks/chatgpt-hooks">
+  Platform-specific hooks for ChatGPT features.
+</Card>
+<Card horizontal title="useHostContext" icon="circle-info" href="/api-reference/hooks/use-host-context">
+  Read host identity and capabilities via the MCP protocol.
+</Card>

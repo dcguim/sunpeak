@@ -189,12 +189,10 @@ Your existing project needs:
     ```tsx
     import { StrictMode } from 'react';
     import { createRoot } from 'react-dom/client';
-    import { simulator } from 'sunpeak';
+    import { Simulator } from 'sunpeak/simulator';
     import { resource } from '../src/resources/example/example-resource';
     import exampleSimulation from '../tests/simulations/example/example-show-simulation.json';
     import '../src/styles/globals.css';
-
-    const { Simulator } = simulator;
 
     // Combine simulation with resource
     const simulations = [{

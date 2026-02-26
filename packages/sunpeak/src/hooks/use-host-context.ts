@@ -1,6 +1,10 @@
 import { useCallback, useSyncExternalStore } from 'react';
 import type { App, McpUiHostContext } from '@modelcontextprotocol/ext-apps';
-import { applyDocumentTheme, applyHostStyleVariables } from '@modelcontextprotocol/ext-apps';
+import {
+  applyDocumentTheme,
+  applyHostStyleVariables,
+  applyHostFonts,
+} from '@modelcontextprotocol/ext-apps';
 import { useApp } from './use-app';
 
 /**
@@ -31,6 +35,9 @@ function getRegistry(app: App): Set<() => void> {
       // iframe canvas doesn't default to white (browsers paint white behind transparent).
       document.documentElement.style.backgroundColor = 'var(--color-background-primary)';
     }
+    if (ctx?.styles?.css?.fonts) {
+      applyHostFonts(ctx.styles.css.fonts);
+    }
 
     app.onhostcontextchanged = (params) => {
       // Apply theme and style variables to document when host changes them
@@ -40,6 +47,9 @@ function getRegistry(app: App): Set<() => void> {
       if (params.styles?.variables) {
         applyHostStyleVariables(params.styles.variables);
         document.documentElement.style.backgroundColor = 'var(--color-background-primary)';
+      }
+      if (params.styles?.css?.fonts) {
+        applyHostFonts(params.styles.css.fonts);
       }
       for (const fn of subs!) fn();
     };

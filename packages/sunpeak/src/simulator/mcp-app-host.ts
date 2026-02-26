@@ -20,9 +20,11 @@ const DEFAULT_HOST_INFO = { name: 'SunpeakSimulator', version: '1.0.0' };
 const DEFAULT_HOST_CAPABILITIES: McpUiHostCapabilities = {
   openLinks: {},
   serverTools: {},
+  serverResources: {},
   logging: {},
   updateModelContext: { text: {} },
   message: { text: {} },
+  sandbox: {},
 };
 
 export interface McpAppHostOptions {

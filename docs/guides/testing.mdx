@@ -110,7 +110,7 @@ Use the `createSimulatorUrl` utility to generate type-safe URLs for e2e tests:
 
 ```typescript
 import { test, expect } from '@playwright/test';
-import { createSimulatorUrl } from 'sunpeak/chatgpt';
+import { createSimulatorUrl } from 'sunpeak/simulator';
 
 test('should render in light mode', async ({ page }) => {
   await page.goto(createSimulatorUrl({
@@ -145,7 +145,7 @@ test('should render in fullscreen mode', async ({ page }) => {
   alt="Simulator set to inline light mode via URL params"
 />
 
-The `createSimulatorUrl` function accepts parameters for configuring host, theme, display mode, device type, safe area insets, and more. See the [Simulator API Reference](/api-reference/simulations/chatgpt-simulator#createsimulatorurl) for the complete list.
+The `createSimulatorUrl` function accepts parameters for configuring host, theme, display mode, device type, safe area insets, and more. See the [Simulator API Reference](/api-reference/simulations/simulator#createsimulatorurl) for the complete list.
 
 ### Example E2E Test Structure
 
@@ -153,7 +153,7 @@ A typical e2e test file tests a resource across different modes:
 
 ```typescript
 import { test, expect } from '@playwright/test';
-import { createSimulatorUrl } from 'sunpeak/chatgpt';
+import { createSimulatorUrl } from 'sunpeak/simulator';
 
 test.describe('Albums Resource', () => {
   test.describe('Light Mode', () => {

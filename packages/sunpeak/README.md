@@ -27,9 +27,9 @@ Quickstart, build, test, and ship your Claude or ChatGPT App!
 [GitHub](https://github.com/Sunpeak-AI/sunpeak)
 
 <div align="center">
-  <a href="https://docs.sunpeak.ai/library/chatgpt-simulator">
+  <a href="https://docs.sunpeak.ai/library/simulator">
     <picture>
-      <img alt="ChatGPT Simulator" src="https://cdn.sunpeak.ai/chatgpt-simulator.png">
+      <img alt="Simulator" src="https://cdn.sunpeak.ai/chatgpt-simulator.png">
     </picture>
   </a>
 </div>
@@ -51,7 +51,7 @@ To add `sunpeak` to an existing project, refer to the [documentation](https://do
 
 ### The `sunpeak` library
 
-1. Runtime APIs: Strongly typed React hooks for interacting with the host runtime (`useApp`, `useToolData`, `useAppState`, `useHostContext`), architected to **support generic and platform-specific features** (ChatGPT, Claude, etc.).
+1. Runtime APIs: Strongly typed React hooks for interacting with the host runtime (`useApp`, `useToolData`, `useAppState`, `useHostContext`, `useUpdateModelContext`, `useAppTools`), architected to **support generic and platform-specific features** (ChatGPT, Claude, etc.). Platform-specific hooks like `useUploadFile`, `useRequestModal`, and `useRequestCheckout` are available via `sunpeak/platform/chatgpt`, with `isChatGPT()` / `isClaude()` platform detection via `sunpeak/platform`.
 2. Multi-host simulator: React component replicating host runtimes (ChatGPT, Claude) to **test Apps locally and automatically** via UI, props, or URL parameters.
 3. MCP server: Serve Resources with mock data to hosts like ChatGPT and Claude with HMR (**no more cache issues or 5-click manual refreshes**).
 
@@ -181,7 +181,7 @@ Using the `Simulator` and `Simulation`s, you can test all possible App states lo
 // tests/e2e/review.spec.ts
 
 import { test, expect } from '@playwright/test';
-import { createSimulatorUrl } from 'sunpeak/chatgpt';
+import { createSimulatorUrl } from 'sunpeak/simulator';
 
 const hosts = ['chatgpt', 'claude'] as const;
 
@@ -192,12 +192,12 @@ for (const host of hosts) {
         const params = { simulation: 'review-diff', theme: 'light', host }; // Set sim & host state.
         await page.goto(createSimulatorUrl(params));
 
-      // Resource content renders inside an iframe
-      const iframe = page.frameLocator('iframe');
-      const title = iframe.locator('h1:has-text("Refactor Authentication Module")');
-      await expect(title).toBeVisible();
+        // Resource content renders inside an iframe
+        const iframe = page.frameLocator('iframe');
+        const title = iframe.locator('h1:has-text("Refactor Authentication Module")');
+        await expect(title).toBeVisible();
 
-      const color = await title.evaluate((el) => window.getComputedStyle(el).color);
+        const color = await title.evaluate((el) => window.getComputedStyle(el).color);
 
         // Light mode should render dark text.
         expect(color).toBe('rgb(13, 13, 13)');

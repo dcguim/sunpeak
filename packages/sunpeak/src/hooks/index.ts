@@ -36,6 +36,8 @@ export { useCallServerTool } from './use-call-server-tool';
 export type { CallServerToolParams, CallServerToolResult } from './use-call-server-tool';
 export { useSendMessage } from './use-send-message';
 export type { SendMessageParams, MessageContent } from './use-send-message';
+export { useUpdateModelContext } from './use-update-model-context';
+export type { UpdateModelContextParams } from './use-update-model-context';
 export { useOpenLink } from './use-open-link';
 export type { OpenLinkParams } from './use-open-link';
 export { useRequestDisplayMode } from './use-request-display-mode';
@@ -49,6 +51,10 @@ export type { HostVersion, HostCapabilities } from './use-host-info';
 
 // === Event hooks (reactive state from App events) ===
 export { useTeardown } from './use-teardown';
+
+// === Bidirectional tool calling ===
+export { useAppTools } from './use-app-tools';
+export type { AppTool, AppToolsConfig } from './use-app-tools';
 
 // === State management ===
 export { useAppState } from './use-app-state';

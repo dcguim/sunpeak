@@ -1,7 +1,8 @@
 import * as React from 'react';
 import { useEffect, useRef, useMemo, useCallback } from 'react';
 import { McpAppHost, type McpAppHostOptions } from './mcp-app-host';
-import type { McpUiHostContext } from '@modelcontextprotocol/ext-apps';
+import { createMockOpenAIRuntime, MOCK_OPENAI_RUNTIME_SCRIPT } from './mock-openai-runtime';
+import type { McpUiHostContext, McpUiResourcePermissions } from '@modelcontextprotocol/ext-apps';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 
 /**
@@ -70,12 +71,17 @@ function isAllowedUrl(src: string): boolean {
 
 /**
  * Content Security Policy configuration for iframe resources.
+ * Matches McpUiResourceCsp from the MCP Apps spec.
  */
 export interface ResourceCSP {
   /** Domains allowed for fetch/XHR/WebSocket connections */
   connectDomains?: string[];
   /** Domains allowed for scripts, images, styles, fonts */
   resourceDomains?: string[];
+  /** Domains allowed for nested iframes */
+  frameDomains?: string[];
+  /** Domains allowed for the base-uri directive */
+  baseUriDomains?: string[];
 }
 
 /**
@@ -118,13 +124,40 @@ function generateCSP(csp: ResourceCSP | undefined, scriptSrc: string): string {
     // Invalid URL, skip
   }
 
+  // frame-src: default to 'none', but allow declared frame domains
+  const frameSources = new Set<string>();
+  if (csp?.frameDomains) {
+    for (const domain of csp.frameDomains) {
+      if (isValidCspSource(domain)) {
+        frameSources.add(domain);
+      } else {
+        console.warn('[IframeResource] Ignoring invalid CSP frame domain:', domain);
+      }
+    }
+  }
+  const frameSrc =
+    frameSources.size > 0 ? `frame-src ${Array.from(frameSources).join(' ')}` : "frame-src 'none'";
+
+  // base-uri: default to 'self', but allow declared base-uri domains
+  const baseSources = new Set<string>(["'self'"]);
+  if (csp?.baseUriDomains) {
+    for (const domain of csp.baseUriDomains) {
+      if (isValidCspSource(domain)) {
+        baseSources.add(domain);
+      } else {
+        console.warn('[IframeResource] Ignoring invalid CSP base-uri domain:', domain);
+      }
+    }
+  }
+
   const directives: string[] = [
-    "default-src 'self'",
+    "default-src 'none'",
     `script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: ${scriptOrigin}`.trim(),
     `style-src 'self' 'unsafe-inline' ${scriptOrigin}`.trim(),
-    "frame-src 'none'",
+    frameSrc,
+    "object-src 'none'",
     "form-action 'none'",
-    "base-uri 'self'",
+    `base-uri ${Array.from(baseSources).join(' ')}`,
   ];
 
   const connectSources = new Set<string>(["'self'"]);
@@ -198,10 +231,18 @@ function injectPaintFence(iframe: HTMLIFrameElement): void {
  * Generates HTML wrapper for a script URL.
  * The MCP Apps SDK in the loaded script handles communication via PostMessageTransport.
  */
-function generateScriptHtml(scriptSrc: string, theme: string, cspPolicy: string): string {
+function generateScriptHtml(
+  scriptSrc: string,
+  theme: string,
+  cspPolicy: string,
+  platformScript?: string
+): string {
   const safeScriptSrc = escapeHtml(scriptSrc);
   const safeCsp = escapeHtml(cspPolicy);
   const safeTheme = escapeHtml(theme);
+  // Platform runtime script (e.g. mock window.openai) runs before the app
+  // script so that isChatGPT() and platform hooks work from first render.
+  const platformTag = platformScript ? `\n  <script>${platformScript}</script>` : '';
   return `<!DOCTYPE html>
 <html lang="en" data-theme="${safeTheme}">
 <head>
@@ -223,13 +264,40 @@ function generateScriptHtml(scriptSrc: string, theme: string, cspPolicy: string)
       background: transparent;
     }
   </style>
-  <script>${PAINT_FENCE_SCRIPT}</script>
+  <script>${PAINT_FENCE_SCRIPT}</script>${platformTag}
 </head>
 <body>
   <div id="root"></div>
   <script src="${safeScriptSrc}"></script>
 </body>
 </html>`;
+}
+
+/**
+ * Build the iframe `allow` attribute from resource-declared permissions.
+ * Maps McpUiResourcePermissions to Permission Policy directives and
+ * combines them with simulator baseline permissions.
+ */
+function buildIframeAllow(permissions: McpUiResourcePermissions | undefined): string {
+  const parts: string[] = [
+    'local-network-access *', // Always needed for local dev server access
+  ];
+
+  // Map spec permissions to their Permission Policy names
+  const permMap: [keyof McpUiResourcePermissions, string][] = [
+    ['camera', 'camera'],
+    ['microphone', 'microphone'],
+    ['geolocation', 'geolocation'],
+    ['clipboardWrite', 'clipboard-write'],
+  ];
+
+  for (const [key, directive] of permMap) {
+    if (permissions?.[key]) {
+      parts.push(directive);
+    }
+  }
+
+  return parts.join('; ');
 }
 
 interface IframeResourceProps {
@@ -249,12 +317,18 @@ interface IframeResourceProps {
   hostContext?: McpUiHostContext;
   /** Tool input arguments to send after connection */
   toolInput?: Record<string, unknown>;
+  /** Partial/streaming tool input to send as a tool-input-partial notification */
+  toolInputPartial?: Record<string, unknown>;
   /** Tool result to send after connection */
   toolResult?: CallToolResult;
   /** Optional callbacks for the MCP Apps host */
   hostOptions?: McpAppHostOptions;
   /** Optional CSP configuration (only used with scriptSrc) */
   csp?: ResourceCSP;
+  /** Resource-declared sandbox permissions (camera, microphone, etc.) */
+  permissions?: McpUiResourcePermissions;
+  /** Whether the host should render a border around the resource */
+  prefersBorder?: boolean;
   /** Optional className for the iframe container */
   className?: string;
   /** Optional style for the iframe */
@@ -271,6 +345,12 @@ interface IframeResourceProps {
    * This bypasses the normal MCP Apps protocol and is for simulator testing.
    */
   debugInjectState?: Record<string, unknown> | null;
+  /**
+   * Whether to inject a mock ChatGPT runtime (window.openai) into the iframe.
+   * When true, ChatGPT-specific hooks (useUploadFile, useRequestModal, etc.)
+   * and isChatGPT() will work inside the iframe.
+   */
+  injectOpenAIRuntime?: boolean;
 }
 
 /**
@@ -290,13 +370,17 @@ export function IframeResource({
   scriptSrc,
   hostContext,
   toolInput,
+  toolInputPartial,
   toolResult,
   hostOptions,
   csp,
+  permissions,
+  prefersBorder,
   className,
   style,
   onDisplayModeReady,
   debugInjectState,
+  injectOpenAIRuntime,
 }: IframeResourceProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const hostRef = useRef<McpAppHost | null>(null);
@@ -350,7 +434,17 @@ export function IframeResource({
     if (src && iframeRef.current) {
       injectPaintFence(iframeRef.current);
     }
-  }, [src]);
+    // Inject mock ChatGPT runtime for src-mode iframes after page load.
+    // For srcdoc mode this is handled by an inline script in the generated HTML.
+    if (injectOpenAIRuntime && iframeRef.current?.contentWindow) {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (iframeRef.current.contentWindow as any).openai = createMockOpenAIRuntime();
+      } catch {
+        // Cross-origin iframe — contentWindow access blocked
+      }
+    }
+  }, [src, injectOpenAIRuntime]);
 
   // Update host context when props change.
   // McpAppHost.setHostContext() internally detects display mode changes
@@ -368,6 +462,13 @@ export function IframeResource({
       host.sendToolInput(toolInput);
     }
   }, [host, toolInput]);
+
+  // Send partial/streaming tool input
+  useEffect(() => {
+    if (toolInputPartial) {
+      host.sendToolInputPartial(toolInputPartial);
+    }
+  }, [host, toolInputPartial]);
 
   // Send tool result updates
   // Note: Don't check host.initialized here - McpAppHost handles queueing internally
@@ -394,6 +495,14 @@ export function IframeResource({
   // Validate URL
   const isValidUrl = useMemo(() => resourceUrl && isAllowedUrl(resourceUrl), [resourceUrl]);
 
+  // Build iframe allow attribute from resource permissions
+  const allowAttribute = useMemo(() => buildIframeAllow(permissions), [permissions]);
+
+  // Border style when resource declares prefersBorder
+  const borderStyle: React.CSSProperties = prefersBorder
+    ? { border: '1px solid var(--color-border-primary, #e5e7eb)' }
+    : { border: 'none' };
+
   // For scriptSrc mode, generate HTML with srcdoc (must be above early return to satisfy rules-of-hooks)
   const htmlContent = useMemo(() => {
     if (!scriptSrc || !isValidUrl) {
@@ -410,8 +519,9 @@ export function IframeResource({
 
     const cspPolicy = generateCSP(csp, absoluteScriptSrc);
     const theme = hostContext?.theme ?? 'dark';
-    return generateScriptHtml(absoluteScriptSrc, theme, cspPolicy);
-  }, [scriptSrc, isValidUrl, csp, hostContext?.theme]);
+    const platformScript = injectOpenAIRuntime ? MOCK_OPENAI_RUNTIME_SCRIPT : undefined;
+    return generateScriptHtml(absoluteScriptSrc, theme, cspPolicy, platformScript);
+  }, [scriptSrc, isValidUrl, csp, hostContext?.theme, injectOpenAIRuntime]);
 
   // For src mode, use iframe src directly
   if (src) {
@@ -427,7 +537,7 @@ export function IframeResource({
         onLoad={handleLoad}
         className={className}
         style={{
-          border: 'none',
+          ...borderStyle,
           background: 'transparent',
           colorScheme: hostContext?.theme === 'light' ? 'light dark' : 'dark light',
           width: '100%',
@@ -438,7 +548,7 @@ export function IframeResource({
         }}
         title="Resource Preview"
         sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
-        allow="local-network-access *; microphone *; midi *; accelerometer 'none'; autoplay 'none'; camera 'none'; display-capture 'none'; geolocation 'none'; gyroscope 'none'; magnetometer 'none'; payment 'none'; publickey-credentials-get 'none'; usb 'none'; xr-spatial-tracking 'none'"
+        allow={allowAttribute}
       />
     );
   }
@@ -450,7 +560,7 @@ export function IframeResource({
       onLoad={handleLoad}
       className={className}
       style={{
-        border: 'none',
+        ...borderStyle,
         background: 'transparent',
         colorScheme: hostContext?.theme === 'light' ? 'light dark' : 'dark light',
         width: '100%',
@@ -461,7 +571,7 @@ export function IframeResource({
       }}
       title="Resource Preview"
       sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
-      allow="local-network-access *; microphone *; midi *; accelerometer 'none'; autoplay 'none'; camera 'none'; display-capture 'none'; geolocation 'none'; gyroscope 'none'; magnetometer 'none'; payment 'none'; publickey-credentials-get 'none'; usb 'none'; xr-spatial-tracking 'none'"
+      allow={allowAttribute}
     />
   );
 }
@@ -473,5 +583,6 @@ export const _testExports = {
   isValidCspSource,
   generateCSP,
   generateScriptHtml,
+  buildIframeAllow,
   ALLOWED_SCRIPT_ORIGINS,
 };

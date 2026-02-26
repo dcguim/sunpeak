@@ -54,17 +54,31 @@ describe('IframeResource', () => {
     );
   });
 
-  it('sets permissions policy matching ChatGPT iframe model', () => {
+  it('sets default permissions policy with local-network-access', () => {
     render(<IframeResource scriptSrc="/dist/carousel/carousel.js" />);
 
     const iframe = screen.getByTitle('Resource Preview') as HTMLIFrameElement;
     const allow = iframe.getAttribute('allow');
     expect(allow).toContain('local-network-access *');
-    expect(allow).toContain('microphone *');
-    expect(allow).toContain('midi *');
-    expect(allow).toContain("camera 'none'");
-    expect(allow).toContain("geolocation 'none'");
-    expect(allow).toContain("usb 'none'");
+    // Without resource permissions declared, only local-network-access is allowed
+    expect(allow).toBe('local-network-access *');
+  });
+
+  it('adds resource-declared permissions to allow attribute', () => {
+    render(
+      <IframeResource
+        scriptSrc="/dist/carousel/carousel.js"
+        permissions={{ microphone: {}, clipboardWrite: {} }}
+      />
+    );
+
+    const iframe = screen.getByTitle('Resource Preview') as HTMLIFrameElement;
+    const allow = iframe.getAttribute('allow');
+    expect(allow).toContain('local-network-access *');
+    expect(allow).toContain('microphone');
+    expect(allow).toContain('clipboard-write');
+    expect(allow).not.toContain('camera');
+    expect(allow).not.toContain('geolocation');
   });
 
   it('applies custom className and style', () => {
@@ -313,33 +327,32 @@ describe('IframeResource Security', () => {
       expect(sandbox).not.toContain('allow-top-navigation');
     });
 
-    it('allows some device APIs and denies others via permissions policy', () => {
-      render(<IframeResource scriptSrc="/dist/carousel/carousel.js" />);
+    it('builds allow attribute from resource permissions', () => {
+      render(
+        <IframeResource
+          scriptSrc="/dist/carousel/carousel.js"
+          permissions={{ camera: {}, geolocation: {} }}
+        />
+      );
 
       const iframe = screen.getByTitle('Resource Preview') as HTMLIFrameElement;
       const allow = iframe.getAttribute('allow');
 
       expect(allow).toContain('local-network-access *');
-      expect(allow).toContain('microphone *');
-      expect(allow).toContain('midi *');
+      expect(allow).toContain('camera');
+      expect(allow).toContain('geolocation');
+      // Permissions not declared should not appear
+      expect(allow).not.toContain('microphone');
+      expect(allow).not.toContain('clipboard-write');
+    });
 
-      const deniedAPIs = [
-        'camera',
-        'geolocation',
-        'usb',
-        'payment',
-        'gyroscope',
-        'magnetometer',
-        'accelerometer',
-        'display-capture',
-        'publickey-credentials-get',
-        'xr-spatial-tracking',
-        'autoplay',
-      ];
+    it('defaults to local-network-access only without permissions', () => {
+      render(<IframeResource scriptSrc="/dist/carousel/carousel.js" />);
 
-      for (const api of deniedAPIs) {
-        expect(allow).toContain(`${api} 'none'`);
-      }
+      const iframe = screen.getByTitle('Resource Preview') as HTMLIFrameElement;
+      const allow = iframe.getAttribute('allow');
+
+      expect(allow).toBe('local-network-access *');
     });
   });
 
@@ -363,10 +376,11 @@ describe('IframeResource Security', () => {
         'https://sunpeak-prod-app-storage.s3.us-east-2.amazonaws.com/widget.js'
       );
 
-      expect(csp).toContain("default-src 'self'");
+      expect(csp).toContain("default-src 'none'");
       expect(csp).toContain("script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:");
       expect(csp).toContain("style-src 'self' 'unsafe-inline'");
       expect(csp).toContain("frame-src 'none'");
+      expect(csp).toContain("object-src 'none'");
       expect(csp).toContain("form-action 'none'");
       expect(csp).toContain("base-uri 'self'");
     });
@@ -442,7 +456,7 @@ describe('IframeResource Security', () => {
       const srcDoc = getSrcDoc();
 
       expect(srcDoc).toContain('http-equiv="Content-Security-Policy"');
-      expect(srcDoc).toContain('default-src &#39;self&#39;');
+      expect(srcDoc).toContain('default-src &#39;none&#39;');
     });
 
     it('applies custom CSP from props', () => {

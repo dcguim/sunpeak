@@ -78,6 +78,7 @@ export function Simulator({
         src={state.resourceUrl}
         hostContext={hostContext}
         toolInput={state.toolInput}
+        toolInputPartial={state.toolInputPartial}
         toolResult={state.effectiveToolResult}
         hostOptions={{
           hostInfo: activeShell?.hostInfo,
@@ -85,8 +86,11 @@ export function Simulator({
           onDisplayModeChange: state.handleDisplayModeChange,
           onUpdateModelContext: state.handleUpdateModelContext,
         }}
+        permissions={state.permissions}
+        prefersBorder={state.prefersBorder}
         onDisplayModeReady={state.handleDisplayModeReady}
         debugInjectState={state.modelContext}
+        injectOpenAIRuntime={state.activeHost === 'chatgpt'}
         className="h-full w-full"
       />
     );
@@ -96,6 +100,7 @@ export function Simulator({
         scriptSrc={state.resourceScript}
         hostContext={hostContext}
         toolInput={state.toolInput}
+        toolInputPartial={state.toolInputPartial}
         toolResult={state.effectiveToolResult}
         csp={state.csp}
         hostOptions={{
@@ -104,8 +109,11 @@ export function Simulator({
           onDisplayModeChange: state.handleDisplayModeChange,
           onUpdateModelContext: state.handleUpdateModelContext,
         }}
+        permissions={state.permissions}
+        prefersBorder={state.prefersBorder}
         onDisplayModeReady={state.handleDisplayModeReady}
         debugInjectState={state.modelContext}
+        injectOpenAIRuntime={state.activeHost === 'chatgpt'}
         className="h-full w-full"
       />
     );
@@ -263,6 +271,24 @@ export function Simulator({
                   </SidebarControl>
                 </div>
 
+                <div className="grid grid-cols-2 gap-2">
+                  <SidebarControl label="Time Zone">
+                    <SidebarInput
+                      value={state.timeZone}
+                      onChange={(value) => state.setTimeZone(value)}
+                      placeholder="e.g. America/New_York"
+                    />
+                  </SidebarControl>
+
+                  <SidebarControl label="User Agent">
+                    <SidebarInput
+                      value={state.userAgent}
+                      onChange={(value) => state.setUserAgent(value)}
+                      placeholder="Navigator user agent"
+                    />
+                  </SidebarControl>
+                </div>
+
                 <SidebarControl label="Safe Area Insets">
                   <div className="grid grid-cols-4 gap-1">
                     <div className="flex items-center gap-0.5">
@@ -362,6 +388,19 @@ export function Simulator({
                 error={state.toolInputError}
                 maxRows={8}
               />
+              <button
+                type="button"
+                onClick={state.sendToolInputPartial}
+                disabled={!!state.toolInputError}
+                className="mt-1 w-full rounded px-2 py-1 text-xs disabled:opacity-40"
+                style={{
+                  backgroundColor: 'var(--color-background-tertiary)',
+                  color: 'var(--color-text-secondary)',
+                  border: '1px solid var(--color-border-primary)',
+                }}
+              >
+                Send as Partial (Streaming)
+              </button>
             </SidebarCollapsibleControl>
 
             <SidebarCollapsibleControl label="Tool Result (JSON)">

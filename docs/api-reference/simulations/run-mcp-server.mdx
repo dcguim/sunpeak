@@ -124,8 +124,8 @@ The MCP server exposes:
 
 The server creates MCP Tools and Resources from your simulations:
 
-1. **Tools** - One per simulation, using the `tool` definition. When called, returns `toolResult.structuredContent`.
-2. **Resources** - One per simulation, containing the built resource HTML from `distPath`.
+1. **Tools** - One per simulation, using the `tool` definition. When called, returns `toolResult.structuredContent`. Tool metadata including `visibility` is preserved.
+2. **Resources** - One per simulation, containing the built resource HTML from `distPath`. Resource metadata including `permissions`, `csp`, `prefersBorder`, and `domain` is preserved.
 
 Your app accesses the mock data via runtime hooks:
 
@@ -138,6 +138,23 @@ function MyApp() {
   return <div>{output?.items.map(item => <p key={item}>{item}</p>)}</div>;
 }
 ```
+
+## Server Helpers
+
+For custom MCP server setups, `sunpeak/mcp` re-exports server helpers from the MCP Apps SDK:
+
+```typescript
+import {
+  registerAppTool,
+  registerAppResource,
+  getUiCapability,
+  EXTENSION_ID,
+  RESOURCE_URI_META_KEY,
+  RESOURCE_MIME_TYPE,
+} from 'sunpeak/mcp';
+```
+
+These are useful when building your own production MCP server instead of using `runMCPServer`. See the [MCP Apps SDK documentation](https://github.com/modelcontextprotocol/ext-apps) for details.
 
 ## See Also
 

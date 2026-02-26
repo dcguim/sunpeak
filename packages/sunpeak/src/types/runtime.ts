@@ -11,8 +11,16 @@ export type {
   McpUiAppCapabilities,
   McpUiHostCapabilities,
   McpUiHostStyles,
+  McpUiHostCss,
   McpUiStyleVariableKey,
   McpUiStyles,
+  McpUiResourcePermissions,
+  McpUiResourceCsp,
+  McpUiResourceMeta,
+  McpUiToolMeta,
+  McpUiToolVisibility,
+  McpUiClientCapabilities,
+  McpUiSupportedContentBlockModalities,
 } from '@modelcontextprotocol/ext-apps';
 
 // Short aliases for common SDK types

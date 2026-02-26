@@ -26,8 +26,10 @@ export type Platform = 'chatgpt' | 'claude' | 'unknown';
  * Detect the current host platform.
  *
  * Detection is based on:
- * 1. Host context platform field (when available)
+ * 1. Platform runtime objects (window.openai for ChatGPT — works in both
+ *    real hosts and the simulator when the ChatGPT host shell is active)
  * 2. User agent patterns as fallback
+ * 3. Hostname matching as final fallback
  *
  * @returns The detected platform
  */
@@ -35,6 +37,12 @@ export function detectPlatform(): Platform {
   // Check if we're in a browser environment
   if (typeof window === 'undefined') {
     return 'unknown';
+  }
+
+  // ChatGPT injects window.openai; the simulator does the same when
+  // the ChatGPT host shell is selected. This is the most reliable signal.
+  if ('openai' in window) {
+    return 'chatgpt';
   }
 
   // Check user agent patterns for platform detection

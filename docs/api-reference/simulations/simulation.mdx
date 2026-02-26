@@ -5,7 +5,7 @@ description: "Define test scenarios for your resources."
 
 ## Overview
 
-Simulations define test scenarios for your resources—combining tool definitions, mock data, and platform state. They can be used with the ChatGPTSimulator for local development or runMCPServer for platform testing with hosts like ChatGPT.
+Simulations define test scenarios for your resources—combining tool definitions, mock data, and platform state. They can be used with the Simulator for local development or runMCPServer for platform testing with hosts like ChatGPT and Claude.
 
 <Tabs>
   <Tab title="Framework (JSON)">
@@ -45,7 +45,7 @@ Simulations define test scenarios for your resources—combining tool definition
         "annotations": { "readOnlyHint": true },
         "_meta": {
           "ui": {
-            "visibility": true
+            "visibility": ["model", "app"]
           }
         }
       },
@@ -133,13 +133,13 @@ Simulations define test scenarios for your resources—combining tool definition
     }
     ```
 
-    ## Usage with ChatGPTSimulator
+    ## Usage with Simulator
 
-    Pass simulations to the `ChatGPTSimulator` component:
+    Pass simulations to the `Simulator` component:
 
     ```tsx
     import 'sunpeak/style.css';
-    import { ChatGPTSimulator } from 'sunpeak';
+    import { Simulator } from 'sunpeak/simulator';
     import type { Simulation } from 'sunpeak';
 
     const simulations: Record<string, Simulation> = {
@@ -167,7 +167,7 @@ Simulations define test scenarios for your resources—combining tool definition
     };
 
     function App() {
-      return <ChatGPTSimulator simulations={simulations} appName="My App" />;
+      return <Simulator simulations={simulations} appName="My App" />;
     }
     ```
 
@@ -251,6 +251,19 @@ interface Tool {
 }
 ```
 
+#### Tool Visibility
+
+The `tool._meta.ui.visibility` field controls which contexts can invoke the tool:
+
+```typescript
+type McpUiToolVisibility = ('model' | 'app')[];
+```
+
+- `"model"` — The AI model can call this tool
+- `"app"` — The app can call this tool (via `useCallServerTool`)
+
+When set in the simulation JSON, the MCP server preserves this metadata when registering tools with the host.
+
 ### Resource
 
 ```typescript
@@ -264,9 +277,73 @@ interface Resource {
 }
 ```
 
+#### Resource Metadata (`_meta.ui`)
+
+The `resource._meta.ui` field configures resource rendering behavior:
+
+```typescript
+interface McpUiResourceMeta {
+  /** Whether the host should render a border around the resource */
+  prefersBorder?: boolean;
+
+  /** Origin isolation domain for the resource iframe (used by web hosts) */
+  domain?: string;
+
+  /** Sandbox permissions for the resource iframe */
+  permissions?: McpUiResourcePermissions;
+
+  /** Content Security Policy for the resource iframe */
+  csp?: McpUiResourceCsp;
+}
+```
+
+##### Permissions
+
+```typescript
+interface McpUiResourcePermissions {
+  camera?: boolean;
+  microphone?: boolean;
+  geolocation?: boolean;
+  clipboardWrite?: boolean;
+}
+```
+
+The simulator maps these to iframe `allow` attribute directives. Only declared permissions are enabled.
+
+##### CSP
+
+```typescript
+interface McpUiResourceCsp {
+  connectDomains?: string[];     // Allowed fetch/XHR/WebSocket origins
+  resourceDomains?: string[];    // Allowed image/media/font origins
+  frameDomains?: string[];       // Allowed nested iframe origins
+  baseUriDomains?: string[];     // Allowed base URI origins
+}
+```
+
+Example resource config with metadata:
+
+```tsx
+export const resource: ResourceConfig = {
+  name: 'map',
+  description: 'Interactive map',
+  _meta: {
+    ui: {
+      prefersBorder: true,
+      permissions: { geolocation: true },
+      csp: {
+        connectDomains: ['https://api.mapbox.com'],
+        resourceDomains: ['https://tiles.mapbox.com'],
+        frameDomains: ['https://embed.mapbox.com'],
+      },
+    },
+  },
+};
+```
+
 ## See Also
 
-<Card horizontal title="ChatGPTSimulator" icon="desktop" href="/api-reference/simulations/chatgpt-simulator">
+<Card horizontal title="Simulator" icon="desktop" href="/api-reference/simulations/simulator">
   Component API reference.
 </Card>
 <Card horizontal title="runMCPServer" icon="server" href="/api-reference/simulations/run-mcp-server">

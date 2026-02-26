@@ -258,7 +258,13 @@ function createAppServer(
         description: tool.description as string | undefined,
         _meta: {
           ...toolMeta,
-          ui: { resourceUri: uri },
+          ui: {
+            resourceUri: uri,
+            // Preserve tool visibility from simulation metadata if declared
+            ...((toolMeta.ui as Record<string, unknown>)?.visibility
+              ? { visibility: (toolMeta.ui as Record<string, unknown>).visibility }
+              : {}),
+          },
         },
       },
       async (extra) => {

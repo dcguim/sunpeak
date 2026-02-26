@@ -7,11 +7,9 @@ sunpeak dev
 For custom setups, you can manually configure the simulator:
 
 ```tsx
-import { simulator } from 'sunpeak';
+import { Simulator } from 'sunpeak/simulator';
 import { resource } from './resources/example/example-resource';
 import exampleSimulation from './resources/example/example-show-simulation.json';
-
-const { Simulator } = simulator;
 
 // Combine simulation with resource
 const simulations = [{

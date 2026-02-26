@@ -25,7 +25,7 @@
             "group": "sunpeak Library",
             "pages": [
               "library/runtime-apis",
-              "library/chatgpt-simulator",
+              "library/simulator",
               "library/mcp-server"
             ]
           },
@@ -74,7 +74,7 @@
             "group": "Simulations",
             "pages": [
               "api-reference/simulations/simulation",
-              "api-reference/simulations/chatgpt-simulator",
+              "api-reference/simulations/simulator",
               "api-reference/simulations/run-mcp-server"
             ]
           },
@@ -90,23 +90,27 @@
           {
             "group": "Hooks",
             "pages": [
+              "api-reference/hooks/chatgpt-hooks",
+              "api-reference/hooks/platform-detection",
               "api-reference/hooks/use-app",
-              "api-reference/hooks/use-host-context",
-              "api-reference/hooks/use-tool-data",
-              "api-reference/hooks/use-theme",
-              "api-reference/hooks/use-display-mode",
-              "api-reference/hooks/use-locale",
-              "api-reference/hooks/use-safe-area",
-              "api-reference/hooks/use-viewport",
-              "api-reference/hooks/use-is-mobile",
               "api-reference/hooks/use-app-state",
+              "api-reference/hooks/use-app-tools",
               "api-reference/hooks/use-call-server-tool",
-              "api-reference/hooks/use-send-message",
+              "api-reference/hooks/use-display-mode",
+              "api-reference/hooks/use-host-context",
+              "api-reference/hooks/use-host-info",
+              "api-reference/hooks/use-is-mobile",
+              "api-reference/hooks/use-locale",
               "api-reference/hooks/use-open-link",
               "api-reference/hooks/use-request-display-mode",
+              "api-reference/hooks/use-safe-area",
               "api-reference/hooks/use-send-log",
-              "api-reference/hooks/use-host-info",
-              "api-reference/hooks/use-teardown"
+              "api-reference/hooks/use-send-message",
+              "api-reference/hooks/use-teardown",
+              "api-reference/hooks/use-theme",
+              "api-reference/hooks/use-tool-data",
+              "api-reference/hooks/use-update-model-context",
+              "api-reference/hooks/use-viewport"
             ]
           },
           {

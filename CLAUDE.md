@@ -47,7 +47,7 @@ packages/sunpeak/
 │   │   ├── simulator.tsx     # Simulator component (host picker, sidebar, delegates to shell)
 │   │   ├── use-simulator-state.ts  # All simulator state management
 │   │   ├── hosts.ts          # HostShell interface + registry
-│   │   ├── mcp-app-host.ts   # MCP Apps bridge wrapper (generic)
+│   │   ├── mcp-app-host.ts   # MCP Apps bridge wrapper (generic, supports streaming partials)
 │   │   ├── iframe-resource.tsx  # Iframe rendering + CSP (generic)
 │   │   ├── simple-sidebar.tsx   # Dev control panel
 │   │   └── theme-provider.tsx   # Pluggable theme provider
@@ -57,7 +57,7 @@ packages/sunpeak/
 │   ├── claude/               # Claude host shell
 │   │   ├── claude-conversation.tsx   # Claude conversation chrome
 │   │   └── claude-host.ts    # Host registration (theme, capabilities)
-│   ├── hooks/                # React hooks (useApp, useHostContext, useToolData, etc.)
+│   ├── hooks/                # React hooks (useApp, useHostContext, useToolData, useAppState, useUpdateModelContext, useAppTools, etc.)
 │   ├── mcp/                  # MCP server (runMCPServer, resource registration)
 │   ├── platform/             # Platform detection (detectPlatform, isChatGPT, isClaude)
 │   │   └── chatgpt/          # ChatGPT-specific: useUploadFile, useRequestModal, useRequestCheckout
@@ -74,11 +74,11 @@ packages/sunpeak/
 ```
 
 ### Export Map (`sunpeak`)
-- `sunpeak` — Hooks, types, SDK re-exports, `simulator` + `chatgpt` namespaces
+- `sunpeak` — Hooks, types, SDK re-exports (`App`, `RESOURCE_MIME_TYPE`, `LATEST_PROTOCOL_VERSION`, etc.), `simulator` + `chatgpt` namespaces
 - `sunpeak/simulator` — Generic Simulator, host shell system, infrastructure
 - `sunpeak/chatgpt` — ChatGPTSimulator (backwards compat alias), ChatGPT shell
 - `sunpeak/claude` — ClaudeSimulator alias, Claude shell
-- `sunpeak/mcp` — Server utilities
+- `sunpeak/mcp` — Server utilities (`runMCPServer`) + SDK server helpers (`registerAppTool`, `registerAppResource`, `getUiCapability`, `EXTENSION_ID`)
 - `sunpeak/platform` — Platform detection
 - `sunpeak/platform/chatgpt` — ChatGPT-specific hooks (file upload, modals, checkout)
 - `sunpeak/style.css` — Main stylesheet

@@ -34,7 +34,9 @@ for (const host of hosts) {
         await expect(albumImage).toBeVisible();
 
         // Verify aspect-[4/3] container
-        const imageContainer = iframe.locator('button:has-text("Summer Slice") .aspect-\\[4\\/3\\]');
+        const imageContainer = iframe.locator(
+          'button:has-text("Summer Slice") .aspect-\\[4\\/3\\]'
+        );
         await expect(imageContainer).toBeVisible();
 
         const containerStyles = await imageContainer.evaluate((el) => {

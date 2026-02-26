@@ -26,10 +26,8 @@ const variantColorClasses: Record<ButtonVariant, Record<ButtonColor, string>> = 
       'bg-[var(--color-background-inverse)] text-[var(--color-text-inverse)] hover:opacity-85 active:opacity-75',
     secondary:
       'bg-[var(--color-background-tertiary)] text-[var(--color-text-primary)] hover:opacity-80 active:opacity-70',
-    warning:
-      'bg-[var(--color-text-warning)] text-white hover:opacity-85 active:opacity-75',
-    danger:
-      'bg-[var(--color-text-danger)] text-white hover:opacity-85 active:opacity-75',
+    warning: 'bg-[var(--color-text-warning)] text-white hover:opacity-85 active:opacity-75',
+    danger: 'bg-[var(--color-text-danger)] text-white hover:opacity-85 active:opacity-75',
   },
   soft: {
     primary:

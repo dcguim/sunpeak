@@ -7,6 +7,8 @@ description: "Reactive access to the host context."
 
 The `useHostContext` hook subscribes to the full host context object, which contains theme, display mode, locale, safe area insets, container dimensions, and more. It updates reactively whenever the host changes any value.
 
+In addition to providing reactive state, `useHostContext` automatically applies host-provided styles and fonts to the iframe document. This includes CSS style variables, document theme (`light`/`dark`), and `@font-face` rules for host-provided fonts — all applied on initial context and updated whenever the host context changes.
+
 Most apps should use the convenience hooks (`useTheme`, `useDisplayMode`, `useLocale`, etc.) instead of accessing the full context directly.
 
 ## Import
@@ -30,10 +32,17 @@ interface McpUiHostContext {
   theme?: 'light' | 'dark';
   displayMode?: 'inline' | 'pip' | 'fullscreen';
   locale?: string;
+  timeZone?: string;
+  userAgent?: string;
+  platform?: 'mobile' | 'desktop' | 'web';
+  deviceCapabilities?: { hover?: boolean; touch?: boolean };
   safeAreaInsets?: { top: number; bottom: number; left: number; right: number };
-  containerDimensions?: { width: number; height: number };
+  containerDimensions?: { maxHeight?: number };
   availableDisplayModes?: ('inline' | 'pip' | 'fullscreen')[];
-  // ... additional host-specific fields
+  styles?: {
+    variables?: Record<string, string>;
+    fonts?: Array<{ family: string; url: string; weight?: string; style?: string }>;
+  };
 }
 ```
 
