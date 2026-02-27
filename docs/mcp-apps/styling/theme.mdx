@@ -1,0 +1,95 @@
+---
+title: "MCP Apps Theme - Light and Dark Mode for AI Chat UIs"
+sidebarTitle: "Theme"
+description: "Apply and detect the host's light or dark theme in MCP Apps. Use applyDocumentTheme and getDocumentTheme with data-theme attributes and CSS light-dark() functions."
+keywords: ["MCP Apps", "ChatGPT Apps", "dark mode", "light mode", "theme detection", "CSS theming"]
+---
+
+```ts
+import { applyDocumentTheme, getDocumentTheme } from "sunpeak";
+```
+
+<Tip>
+In React components, [`useHostStyles`](/mcp-apps/react/use-host-styles) applies theme, CSS variables, and fonts automatically. The functions below are useful for non-React usage or custom control.
+</Tip>
+
+## Overview
+
+Hosts provide a theme preference (`"light"` or `"dark"`) via host context. The SDK provides functions to apply this theme to the document and read the current theme state.
+
+## applyDocumentTheme
+
+Sets the `data-theme` attribute and `color-scheme` CSS property on `document.documentElement`. This enables:
+
+- CSS selectors like `[data-theme="dark"]`
+- The CSS `light-dark()` function
+- Native elements (scrollbars, form controls) respecting the theme
+
+### Signature
+
+```ts
+function applyDocumentTheme(theme: McpUiTheme): void
+```
+
+### Usage
+
+```ts
+// Apply when host context changes
+app.onhostcontextchanged = (ctx) => {
+  if (ctx.theme) {
+    applyDocumentTheme(ctx.theme);
+  }
+};
+
+// Apply initial theme after connecting
+await app.connect();
+const ctx = app.getHostContext();
+if (ctx?.theme) {
+  applyDocumentTheme(ctx.theme);
+}
+```
+
+### CSS Selectors
+
+After calling `applyDocumentTheme`, use these patterns in your CSS:
+
+```css
+/* Attribute selector */
+[data-theme="dark"] {
+  --bg-color: #1a1a1a;
+}
+[data-theme="light"] {
+  --bg-color: #ffffff;
+}
+
+/* CSS light-dark() function (requires color-scheme) */
+body {
+  background: light-dark(#ffffff, #1a1a1a);
+  color: light-dark(#000000, #ffffff);
+}
+```
+
+## getDocumentTheme
+
+Reads the current theme from `document.documentElement`. Checks the `data-theme` attribute first, then falls back to the `dark` class for Tailwind CSS compatibility.
+
+### Signature
+
+```ts
+function getDocumentTheme(): McpUiTheme
+```
+
+### Usage
+
+```ts
+const theme = getDocumentTheme();
+document.body.classList.toggle("dark", theme === "dark");
+```
+
+## McpUiTheme
+
+```ts
+type McpUiTheme = "light" | "dark";
+```
+
+See also: [CSS Variables](/mcp-apps/styling/css-variables) for host-provided color tokens, and [Fonts](/mcp-apps/styling/fonts) for host typography.

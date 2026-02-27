@@ -1,0 +1,56 @@
+---
+title: "MCP Apps useAutoResize - React Auto-Resize Hook"
+sidebarTitle: "useAutoResize"
+description: "React hook for manual auto-resize control in MCP Apps. Reports UI size changes to the host via ResizeObserver and size-changed notifications."
+keywords: ["MCP Apps", "ChatGPT Apps", "React hooks", "useAutoResize", "ResizeObserver", "auto resize"]
+---
+
+```ts
+import { useAutoResize } from "sunpeak";
+```
+
+## Overview
+
+`useAutoResize` enables automatic size reporting to the host via `ResizeObserver`. It watches `document.body` and `document.documentElement` for size changes and sends `ui/notifications/size-changed` notifications.
+
+<Note>
+This hook is **rarely needed**. The `useApp` hook creates the `App` with `autoResize: true` by default, which handles this automatically. Only use `useAutoResize` if you create the `App` manually with `autoResize: false`.
+</Note>
+
+## Signature
+
+```ts
+function useAutoResize(app: App | null): void
+```
+
+<ResponseField name="app" type="App | null" required>
+  The connected `App` instance, or `null` during initialization.
+</ResponseField>
+
+## Usage
+
+```tsx
+function MyComponent() {
+  const [app, setApp] = useState<App | null>(null);
+
+  useEffect(() => {
+    const myApp = new App(
+      { name: "MyApp", version: "1.0.0" },
+      {},
+      { autoResize: false }, // Disable default auto-resize
+    );
+
+    const transport = new PostMessageTransport(window.parent, window.parent);
+    myApp.connect(transport).then(() => setApp(myApp));
+  }, []);
+
+  // Add manual auto-resize control
+  useAutoResize(app);
+
+  return <div>My content</div>;
+}
+```
+
+## How It Works
+
+The hook calls `app.setupSizeChangedNotifications()` when `app` becomes non-null, and disconnects the `ResizeObserver` when the component unmounts. The observer monitors both `document.documentElement` and `document.body` to catch all size changes.

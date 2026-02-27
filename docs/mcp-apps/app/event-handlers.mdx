@@ -1,0 +1,182 @@
+---
+title: "MCP Apps Event Handlers - Host Events"
+sidebarTitle: "Event Handlers"
+description: "Handle MCP App events: tool input, streaming partial input, tool result, tool cancelled, host context changes, teardown, and bidirectional tool calls."
+keywords: ["MCP Apps", "ChatGPT Apps", "event handlers", "tool input", "tool result", "host context"]
+---
+
+```ts
+import { App } from "sunpeak";
+```
+
+<Note>
+In sunpeak, register event handlers in the `onAppCreated` callback of [`useApp`](/mcp-apps/react/use-app) to ensure they're set before the connection handshake.
+</Note>
+
+## Overview
+
+The `App` class exposes setter properties for handling host notifications and requests. These are convenience wrappers around `setNotificationHandler()` and `setRequestHandler()` from the MCP SDK's `Protocol` class. For making requests from the View to the host, see [Requests](/mcp-apps/app/requests).
+
+<Warning>
+Register handlers **before** calling `connect()` to avoid missing notifications during the initialization handshake.
+</Warning>
+
+## Notification Handlers
+
+### ontoolinput
+
+Called when the host sends complete tool arguments. This arrives after a tool call begins and before the tool result.
+
+```ts
+app.ontoolinput = (params) => {
+  console.log("Tool arguments:", params.arguments);
+};
+```
+
+<ResponseField name="params.arguments" type="Record<string, unknown>">
+  Complete tool call arguments as key-value pairs.
+</ResponseField>
+
+### ontoolinputpartial
+
+Called as the host streams partial tool arguments during tool call initialization. Use for progressive rendering before complete input is available.
+
+```ts
+const codePreview = document.querySelector<HTMLPreElement>("#code-preview")!;
+
+app.ontoolinputpartial = (params) => {
+  codePreview.textContent = (params.arguments?.code as string) ?? "";
+};
+```
+
+<ResponseField name="params.arguments" type="Record<string, unknown>">
+  Partial tool arguments (healed JSON — incomplete objects may be truncated).
+</ResponseField>
+
+<Warning>
+Partial arguments are "healed" JSON — the host closes unclosed brackets/braces to produce valid JSON. The last item in arrays or objects may be truncated. Use partial data only for preview UI, not for critical operations.
+</Warning>
+
+### ontoolresult
+
+Called when the host sends the result of a tool execution.
+
+```ts
+app.ontoolresult = (params) => {
+  if (params.isError) {
+    console.error("Tool failed:", params.content);
+  } else {
+    console.log("Tool output:", params.content);
+    console.log("Structured data:", params.structuredContent);
+  }
+};
+```
+
+<ResponseField name="params" type="CallToolResult">
+  Standard MCP tool execution result. Key fields:
+</ResponseField>
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `content` | `ContentBlock[]` | Text content for model context |
+| `structuredContent` | `Record<string, unknown>` | Data optimized for UI rendering |
+| `isError` | `boolean` | Whether the tool returned an error |
+| `_meta` | `object` | Metadata (e.g., `viewUUID` for state persistence) |
+
+### ontoolcancelled
+
+Called when tool execution is cancelled (user action, timeout, classifier intervention).
+
+```ts
+app.ontoolcancelled = (params) => {
+  console.log("Cancelled:", params.reason);
+};
+```
+
+<ResponseField name="params.reason" type="string">
+  Optional reason for the cancellation.
+</ResponseField>
+
+### onhostcontextchanged
+
+Called when the host context changes (theme toggle, resize, locale change, etc.). Params are automatically merged into the internal context before the callback — `getHostContext()` returns updated values.
+
+```ts
+app.onhostcontextchanged = (ctx) => {
+  if (ctx.theme) {
+    document.body.classList.toggle("dark", ctx.theme === "dark");
+  }
+  if (ctx.displayMode) {
+    container.classList.toggle("fullscreen", ctx.displayMode === "fullscreen");
+  }
+  if (ctx.availableDisplayModes) {
+    fullscreenBtn.style.display =
+      ctx.availableDisplayModes.includes("fullscreen") ? "block" : "none";
+  }
+};
+```
+
+<ResponseField name="params" type="McpUiHostContext">
+  Partial context update containing only changed fields. See [Core Types](/mcp-apps/types/core-types) for the full `McpUiHostContext` structure.
+</ResponseField>
+
+## Request Handlers
+
+### onteardown
+
+Called when the host requests graceful shutdown before unmounting the iframe. Return `{}` (or a promise resolving to `{}`) when ready.
+
+```ts
+app.onteardown = async () => {
+  await saveState();
+  closeConnections();
+  return {};
+};
+```
+
+### oncalltool
+
+Handle tool calls from the host directed at this app. Requires declaring `tools` capability in the constructor.
+
+```ts
+const app = new App(
+  { name: "MyApp", version: "1.0.0" },
+  { tools: { listChanged: true } },
+);
+
+app.oncalltool = async (params) => {
+  if (params.name === "get-selection") {
+    return { content: [{ type: "text", text: selectedText }] };
+  }
+  throw new Error(`Unknown tool: ${params.name}`);
+};
+```
+
+<ResponseField name="params.name" type="string">
+  Name of the tool being called.
+</ResponseField>
+<ResponseField name="params.arguments" type="Record<string, unknown>">
+  Tool arguments.
+</ResponseField>
+
+### onlisttools
+
+Return the list of tools this app provides. Requires declaring `tools` capability.
+
+```ts
+app.onlisttools = async () => {
+  return { tools: ["get-selection", "format-text"] };
+};
+```
+
+## Using setNotificationHandler / setRequestHandler
+
+The setter properties above are convenience wrappers. You can also use the underlying MCP SDK methods directly:
+
+```ts
+import { McpUiToolInputNotificationSchema } from "sunpeak";
+
+app.setNotificationHandler(McpUiToolInputNotificationSchema, (notification) => {
+  console.log("Tool input:", notification.params.arguments);
+});
+```

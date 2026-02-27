@@ -1,6 +1,7 @@
 ---
 title: "useApp"
 description: "Access the App instance from context."
+keywords: ["MCP Apps", "ChatGPT Apps", "React hooks", "useApp", "AppProvider"]
 ---
 
 ## Overview
@@ -45,21 +46,24 @@ function MyResource() {
 
 ## AppProvider
 
-The `AppProvider` component wraps your resource component tree and establishes the connection to the MCP Apps host. It is added automatically by the sunpeak framework in both dev and production builds.
+The `AppProvider` component wraps your resource component tree and establishes the connection to the MCP Apps host. It is added automatically by the sunpeak framework in both `sunpeak dev` and `sunpeak build`.
+
+The framework reads `name` and `version` from your project's `package.json` for `appInfo`. All resources in a project share the same app identity:
 
 ```tsx
 import { AppProvider } from 'sunpeak';
 
 // This is handled by the framework — shown here for reference only.
-<AppProvider appInfo={{ name: 'MyResource', version: '1.0.0' }}>
-  <MyResource />
+// appInfo.name and appInfo.version come from package.json.
+<AppProvider appInfo={{ name: 'my-weather-app', version: '1.2.0' }}>
+  <SearchResource />
 </AppProvider>
 ```
 
 ### Props
 
 <ResponseField name="appInfo" type="{ name: string; version: string }" required>
-  App identification information sent to the host.
+  App identification sent to the host during `ui/initialize`. In the sunpeak framework, this is sourced from your project's `package.json` `name` and `version` fields.
 </ResponseField>
 
 <ResponseField name="capabilities" type="Record<string, unknown>">

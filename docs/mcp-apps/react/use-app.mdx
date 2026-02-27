@@ -1,0 +1,116 @@
+---
+title: "MCP Apps useApp - React Connection Hook"
+sidebarTitle: "useApp"
+description: "Connect to an MCP App host with AppProvider and useApp. Handles PostMessageTransport, HMR persistence, React context, and the ui/initialize handshake."
+keywords: ["MCP Apps", "ChatGPT Apps", "React hooks", "useApp", "AppProvider", "connection"]
+---
+
+```ts
+import { useApp, AppProvider } from "sunpeak";
+```
+
+## Overview
+
+Sunpeak uses a **context-based** pattern for MCP App connection. `AppProvider` handles creating the `App`, connecting via `PostMessageTransport`, and sharing the instance through React context. `useApp` reads the connected `App` from that context.
+
+## AppProvider
+
+Wrap your app in `AppProvider` to establish the MCP connection.
+
+### Props
+
+<ResponseField name="appInfo" type="{ name: string; version: string }" required>
+  App identification sent to the host during `ui/initialize`. In the sunpeak framework, this is sourced automatically from your project's `package.json` `name` and `version` fields — all resources share the same app identity.
+</ResponseField>
+
+<ResponseField name="capabilities" type="Record<string, unknown>">
+  Features this app provides. Defaults to `{}`.
+</ResponseField>
+
+<ResponseField name="onAppCreated" type="(app: App) => void">
+  Called after `App` is created but before `connect()`. Use this to register event handlers that must be in place before the handshake.
+</ResponseField>
+
+### Usage
+
+```tsx
+import { AppProvider } from "sunpeak";
+
+function main() {
+  createRoot(document.getElementById("root")!).render(
+    <AppProvider
+      appInfo={{ name: "MyApp", version: "1.0.0" }}
+      capabilities={{}}
+      onAppCreated={(app) => {
+        app.ontoolinput = (input) => console.log("Tool input:", input);
+        app.ontoolresult = (result) => console.log("Tool result:", result);
+      }}
+    >
+      <MyApp />
+    </AppProvider>
+  );
+}
+```
+
+## useApp
+
+Returns the connected `App` instance from context, or `null` while connecting.
+
+### Signature
+
+```ts
+function useApp(): App | null
+```
+
+### Returns
+
+<ResponseField name="return" type="App | null">
+  The connected `App` instance, or `null` during initialization.
+</ResponseField>
+
+### Usage
+
+```tsx
+function MyApp() {
+  const app = useApp();
+
+  if (!app) return <div>Connecting...</div>;
+
+  return <div>Connected to {app.getHostContext()?.hostInfo?.name}</div>;
+}
+```
+
+## Full Example
+
+```tsx
+import { AppProvider, useApp, useHostStyles } from "sunpeak";
+
+function MyApp() {
+  const app = useApp();
+
+  useHostStyles(app, app?.getHostContext());
+
+  if (!app) return <div>Connecting...</div>;
+
+  return (
+    <div style={{ color: "var(--color-text-primary)" }}>
+      Theme: {app.getHostContext()?.theme}
+    </div>
+  );
+}
+
+createRoot(document.getElementById("root")!).render(
+  <AppProvider
+    appInfo={{ name: "MyApp", version: "1.0.0" }}
+    capabilities={{}}
+  >
+    <MyApp />
+  </AppProvider>
+);
+```
+
+## Behavior
+
+- The `App` instance is **persisted at module scope** across React Fast Refresh (HMR), so code changes don't trigger reconnection.
+- On a full page reload, a fresh connection is established.
+- The `App` is created with `autoResize: true` by default. For custom options, create the `App` manually and use [useAutoResize](/mcp-apps/react/use-auto-resize).

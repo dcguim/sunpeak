@@ -1,7 +1,7 @@
 import './simulator/globals.css';
 
 // === MCP Apps SDK re-exports ===
-// Re-export commonly used SDK exports for convenience
+// Core classes and style functions
 export {
   App,
   PostMessageTransport,
@@ -12,6 +12,82 @@ export {
   applyHostFonts,
   applyDocumentTheme,
   getDocumentTheme,
+} from '@modelcontextprotocol/ext-apps';
+
+// Protocol method constants
+export {
+  INITIALIZE_METHOD,
+  INITIALIZED_METHOD,
+  OPEN_LINK_METHOD,
+  MESSAGE_METHOD,
+  REQUEST_DISPLAY_MODE_METHOD,
+  RESOURCE_TEARDOWN_METHOD,
+  SIZE_CHANGED_METHOD,
+  TOOL_INPUT_METHOD,
+  TOOL_INPUT_PARTIAL_METHOD,
+  TOOL_RESULT_METHOD,
+  TOOL_CANCELLED_METHOD,
+  HOST_CONTEXT_CHANGED_METHOD,
+} from '@modelcontextprotocol/ext-apps';
+
+// Zod schemas for runtime validation
+export {
+  McpUiThemeSchema,
+  McpUiDisplayModeSchema,
+  McpUiHostContextSchema,
+  McpUiHostCapabilitiesSchema,
+  McpUiAppCapabilitiesSchema,
+  McpUiHostCssSchema,
+  McpUiHostStylesSchema,
+  McpUiInitializeRequestSchema,
+  McpUiInitializeResultSchema,
+  McpUiInitializedNotificationSchema,
+  McpUiToolInputNotificationSchema,
+  McpUiToolInputPartialNotificationSchema,
+  McpUiToolResultNotificationSchema,
+  McpUiToolCancelledNotificationSchema,
+  McpUiHostContextChangedNotificationSchema,
+  McpUiSizeChangedNotificationSchema,
+  McpUiOpenLinkRequestSchema,
+  McpUiOpenLinkResultSchema,
+  McpUiMessageRequestSchema,
+  McpUiMessageResultSchema,
+  McpUiUpdateModelContextRequestSchema,
+  McpUiRequestDisplayModeRequestSchema,
+  McpUiRequestDisplayModeResultSchema,
+  McpUiResourceTeardownRequestSchema,
+  McpUiResourceTeardownResultSchema,
+  McpUiResourceCspSchema,
+  McpUiResourcePermissionsSchema,
+  McpUiResourceMetaSchema,
+  McpUiToolVisibilitySchema,
+  McpUiToolMetaSchema,
+  McpUiSupportedContentBlockModalitiesSchema,
+} from '@modelcontextprotocol/ext-apps';
+
+// Protocol request/result/notification types
+export type {
+  McpUiInitializeRequest,
+  McpUiInitializeResult,
+  McpUiOpenLinkRequest,
+  McpUiOpenLinkResult,
+  McpUiMessageRequest,
+  McpUiMessageResult,
+  McpUiUpdateModelContextRequest,
+  McpUiRequestDisplayModeRequest,
+  McpUiRequestDisplayModeResult,
+  McpUiResourceTeardownRequest,
+  McpUiResourceTeardownResult,
+  McpUiToolInputNotification,
+  McpUiToolInputPartialNotification,
+  McpUiToolResultNotification,
+  McpUiToolCancelledNotification,
+  McpUiHostContextChangedNotification,
+  McpUiInitializedNotification,
+  McpUiSizeChangedNotification,
+  AppRequest,
+  AppNotification,
+  AppResult,
 } from '@modelcontextprotocol/ext-apps';
 
 // === Sunpeak core (cross-platform) ===

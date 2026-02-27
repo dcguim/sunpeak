@@ -294,7 +294,7 @@ const Component = ResourceModule.default || ResourceModule['${componentName}'];
 if (!Component) {
   document.getElementById('root').innerHTML = '<pre style="color:red;padding:16px">Component not found: ${componentName}\\nExports: ' + Object.keys(ResourceModule).join(', ') + '</pre>';
 } else {
-  const appInfo = { name: ResourceModule.resource?.name || '${componentName}', version: '1.0.0' };
+  const appInfo = { name: ${JSON.stringify(pkg.name || 'sunpeak-app')}, version: ${JSON.stringify(pkg.version || '0.1.0')} };
   root.render(
     createElement(AppProvider, { appInfo }, createElement(Component))
   );

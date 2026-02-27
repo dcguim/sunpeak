@@ -1,0 +1,112 @@
+---
+title: "MCP Apps Fonts - Apply Host-Provided Typography"
+sidebarTitle: "Fonts"
+description: "Apply host-provided custom fonts in MCP Apps using applyHostFonts. Inject @font-face rules, Google Fonts, and custom typography from ChatGPT, Claude, and other hosts."
+keywords: ["MCP Apps", "ChatGPT Apps", "custom fonts", "typography", "font-face", "host styles"]
+---
+
+```ts
+import { applyHostFonts } from "sunpeak";
+```
+
+<Tip>
+In React components, [`useHostStyles`](/mcp-apps/react/use-host-styles) applies fonts, CSS variables, and theme automatically. The function below is useful for non-React usage or custom control.
+</Tip>
+
+## Overview
+
+Hosts may provide custom font CSS via `McpUiHostContext.styles.css.fonts`. This CSS can contain `@font-face` rules, `@import` statements, or both. Use `applyHostFonts` to inject it as a `<style>` tag.
+
+## applyHostFonts
+
+Injects host font CSS into the document head. Idempotent — subsequent calls are no-ops.
+
+### Signature
+
+```ts
+function applyHostFonts(fontCss: string): void
+```
+
+<ResponseField name="fontCss" type="string" required>
+  CSS string containing `@font-face` rules and/or `@import` statements.
+</ResponseField>
+
+### Usage
+
+```ts
+// Apply when host context changes
+app.onhostcontextchanged = (ctx) => {
+  if (ctx.styles?.css?.fonts) {
+    applyHostFonts(ctx.styles.css.fonts);
+  }
+};
+
+// Apply initial fonts after connecting
+await app.connect();
+const ctx = app.getHostContext();
+if (ctx?.styles?.css?.fonts) {
+  applyHostFonts(ctx.styles.css.fonts);
+}
+```
+
+Reference host fonts in CSS with the font family variables:
+
+```css
+body {
+  font-family: var(--font-sans, system-ui, sans-serif);
+}
+
+code {
+  font-family: var(--font-mono, monospace);
+}
+```
+
+## What Hosts Provide
+
+Hosts may provide different types of font CSS:
+
+### Self-hosted fonts
+
+```css
+@font-face {
+  font-family: "Anthropic Sans";
+  src: url("https://assets.anthropic.com/.../Regular.otf") format("opentype");
+  font-weight: 400;
+}
+```
+
+### Google Fonts
+
+```css
+@import url('https://fonts.googleapis.com/css2?family=Roboto&display=swap');
+```
+
+## Combined Pattern
+
+In practice, apply theme, variables, and fonts together when host context changes:
+
+```ts
+import {
+  applyDocumentTheme,
+  applyHostStyleVariables,
+  applyHostFonts,
+} from "sunpeak";
+
+function applyHostContext(ctx) {
+  if (ctx.theme) {
+    applyDocumentTheme(ctx.theme);
+  }
+  if (ctx.styles?.variables) {
+    applyHostStyleVariables(ctx.styles.variables);
+  }
+  if (ctx.styles?.css?.fonts) {
+    applyHostFonts(ctx.styles.css.fonts);
+  }
+}
+
+app.onhostcontextchanged = applyHostContext;
+
+await app.connect();
+const ctx = app.getHostContext();
+if (ctx) applyHostContext(ctx);
+```

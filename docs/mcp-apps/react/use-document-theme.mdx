@@ -1,0 +1,69 @@
+---
+title: "MCP Apps useDocumentTheme - Theme Hook"
+sidebarTitle: "useDocumentTheme"
+description: "React hook for reactive light/dark theme detection in MCP Apps. Uses MutationObserver to watch data-theme attribute changes and re-render components on theme switches."
+keywords: ["MCP Apps", "ChatGPT Apps", "React hooks", "useDocumentTheme", "dark mode", "theme detection"]
+---
+
+```ts
+import { useDocumentTheme } from "sunpeak";
+```
+
+## Overview
+
+`useDocumentTheme` provides the current document theme reactively. It watches `document.documentElement` for changes to the `data-theme` attribute or `class` using a `MutationObserver`, and re-renders your component when the theme changes.
+
+## Signature
+
+```ts
+function useDocumentTheme(): McpUiTheme
+```
+
+## Returns
+
+<ResponseField name="return" type="'light' | 'dark'">
+  The current document theme.
+</ResponseField>
+
+## Usage
+
+```tsx
+function MyApp() {
+  const theme = useDocumentTheme();
+
+  return (
+    <div>
+      {theme === "dark" ? <DarkIcon /> : <LightIcon />}
+    </div>
+  );
+}
+```
+
+```tsx
+function ThemedButton() {
+  const theme = useDocumentTheme();
+
+  return (
+    <button
+      style={{
+        background: theme === "dark" ? "#333" : "#fff",
+        color: theme === "dark" ? "#fff" : "#333",
+      }}
+    >
+      Click me
+    </button>
+  );
+}
+```
+
+## How It Works
+
+The hook uses `MutationObserver` to watch for:
+- Changes to `data-theme` attribute (set by `applyDocumentTheme`)
+- Changes to `class` attribute (Tailwind CSS `dark` class convention)
+
+The observer is automatically disconnected when the component unmounts.
+
+<Tip>
+In most cases, prefer using CSS variables (`var(--color-background-primary)`) or `[data-theme="dark"]` selectors instead of this hook. Reserve `useDocumentTheme` for logic that must branch on the theme value (e.g., choosing between different chart color palettes).
+</Tip>

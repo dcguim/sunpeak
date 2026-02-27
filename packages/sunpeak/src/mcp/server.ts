@@ -483,7 +483,7 @@ export function runMCPServer(config: MCPServerConfig): MCPServerHandle {
       return;
     }
 
-    // Favicon endpoint (ChatGPT fetches this when connecting to an MCP server)
+    // Favicon endpoint
     if (req.method === 'GET' && url.pathname === '/favicon.ico') {
       res.writeHead(200, {
         'Content-Type': 'image/png',

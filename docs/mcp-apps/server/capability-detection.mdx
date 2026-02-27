@@ -1,0 +1,83 @@
+---
+title: "MCP Apps Capability Detection"
+sidebarTitle: "Capability Detection"
+description: "Detect whether an MCP host supports Apps UI before registering tools. Use getUiCapability and EXTENSION_ID to check for MCP Apps support in ChatGPT, Claude, and other hosts."
+keywords: ["MCP Apps", "ChatGPT Apps", "Claude Apps", "capability detection", "feature detection", "host support"]
+---
+
+```ts
+import { getUiCapability, EXTENSION_ID, RESOURCE_MIME_TYPE } from "sunpeak/mcp";
+```
+
+## Overview
+
+Not all MCP hosts support Apps yet. Servers should check whether the connecting host supports MCP Apps before registering UI-enabled tools — if it doesn't, register text-only fallback tools instead. This keeps your server compatible with every host while delivering rich UIs where available.
+
+## getUiCapability
+
+Extracts the MCP Apps capability from the client's `extensions` field.
+
+### Signature
+
+```ts
+function getUiCapability(
+  clientCapabilities: ClientCapabilities | null | undefined,
+): McpUiClientCapabilities | undefined
+```
+
+### Returns
+
+<ResponseField name="return" type="McpUiClientCapabilities | undefined">
+  The capability object if the host supports MCP Apps, or `undefined` if not.
+
+  <ResponseField name="mimeTypes" type="string[]">
+    Supported MIME types. Must include `"text/html;profile=mcp-app"` for MCP Apps support.
+  </ResponseField>
+</ResponseField>
+
+### Usage
+
+Use `server.server.oninitialized` to check capabilities after the MCP handshake:
+
+```ts
+import {
+  getUiCapability,
+  registerAppTool,
+  RESOURCE_MIME_TYPE,
+} from "sunpeak/mcp";
+
+server.server.oninitialized = () => {
+  const clientCapabilities = server.server.getClientCapabilities();
+  const uiCap = getUiCapability(clientCapabilities);
+
+  if (uiCap?.mimeTypes?.includes(RESOURCE_MIME_TYPE)) {
+    // Host supports MCP Apps — register tool with UI
+    registerAppTool(
+      server,
+      "weather",
+      {
+        description: "Get weather with interactive dashboard",
+        _meta: { ui: { resourceUri: "ui://weather/dashboard" } },
+      },
+      weatherHandler,
+    );
+  } else {
+    // Host does not support MCP Apps — register text-only fallback
+    server.registerTool(
+      "weather",
+      { description: "Get weather information" },
+      textWeatherHandler,
+    );
+  }
+};
+```
+
+## EXTENSION_ID
+
+The extension identifier used in the MCP `extensions` field for capability negotiation.
+
+```ts
+const EXTENSION_ID = "io.modelcontextprotocol/ui";
+```
+
+Hosts advertise MCP Apps support by including this key in their `extensions` capabilities during the MCP [initialization handshake](/mcp-apps/lifecycle#2-initialization). `getUiCapability` reads from this key internally.

@@ -1,0 +1,149 @@
+---
+title: "MCP Apps registerAppTool - Register UI Tools"
+sidebarTitle: "registerAppTool"
+description: "Register MCP tools that render interactive HTML UIs. Configure tool visibility, input schemas, structured content, and UI metadata with registerAppTool."
+keywords: ["MCP Apps", "ChatGPT Apps", "register tool", "MCP server", "tool visibility", "input schema"]
+---
+
+```ts
+import { registerAppTool } from "sunpeak/mcp";
+```
+
+## Overview
+
+`registerAppTool` is a convenience wrapper around the MCP SDK's `server.registerTool()` that normalizes [UI metadata](/mcp-apps/introduction#how-are-tools-linked-to-uis) for compatibility across hosts. Use it instead of `registerTool` when your tool should render a View.
+
+## Signature
+
+```ts
+function registerAppTool(
+  server: McpServer,
+  name: string,
+  config: McpUiAppToolConfig,
+  cb: ToolCallback,
+): RegisteredTool
+```
+
+## Parameters
+
+<ResponseField name="server" type="McpServer" required>
+  The MCP server instance.
+</ResponseField>
+
+<ResponseField name="name" type="string" required>
+  Tool name/identifier.
+</ResponseField>
+
+<ResponseField name="config" type="McpUiAppToolConfig" required>
+  Tool configuration. Extends the standard MCP `ToolConfig` with a required `_meta` field containing UI metadata.
+
+  <ResponseField name="title" type="string">
+    Human-readable tool title.
+  </ResponseField>
+  <ResponseField name="description" type="string">
+    Tool description for the model.
+  </ResponseField>
+  <ResponseField name="inputSchema" type="ZodRawShape | AnySchema">
+    Zod schema or JSON Schema for tool arguments.
+  </ResponseField>
+  <ResponseField name="outputSchema" type="ZodRawShape | AnySchema">
+    Zod schema or JSON Schema for tool output.
+  </ResponseField>
+  <ResponseField name="annotations" type="ToolAnnotations">
+    MCP tool annotations (e.g., `readOnlyHint`).
+  </ResponseField>
+  <ResponseField name="_meta" type="object" required>
+    UI metadata linking this tool to a resource.
+    <ResponseField name="ui" type="McpUiToolMeta" required>
+      <ResponseField name="resourceUri" type="string">
+        URI of the UI resource to display (e.g., `"ui://weather/view.html"`).
+      </ResponseField>
+      <ResponseField name="visibility" type="McpUiToolVisibility[]">
+        Who can access this tool. Default: `["model", "app"]`.
+      </ResponseField>
+    </ResponseField>
+  </ResponseField>
+</ResponseField>
+
+<ResponseField name="cb" type="ToolCallback" required>
+  Tool handler function. Receives parsed arguments and returns a `CallToolResult`.
+</ResponseField>
+
+## Usage
+
+### Basic tool with UI
+
+```ts
+import { registerAppTool } from "sunpeak/mcp";
+import { z } from "zod";
+
+registerAppTool(
+  server,
+  "get-weather",
+  {
+    title: "Get Weather",
+    description: "Get current weather for a location",
+    inputSchema: { location: z.string() },
+    _meta: {
+      ui: { resourceUri: "ui://weather/view.html" },
+    },
+  },
+  async (args) => {
+    const weather = await fetchWeather(args.location);
+    return { content: [{ type: "text", text: JSON.stringify(weather) }] };
+  },
+);
+```
+
+### App-only tool (hidden from model)
+
+Set `visibility: ["app"]` for tools that should only be callable from the View — useful for polling, pagination, or UI-driven server interactions:
+
+```ts
+registerAppTool(
+  server,
+  "update-quantity",
+  {
+    description: "Update item quantity in cart",
+    inputSchema: { itemId: z.string(), quantity: z.number() },
+    _meta: {
+      ui: {
+        resourceUri: "ui://shop/cart.html",
+        visibility: ["app"],
+      },
+    },
+  },
+  async ({ itemId, quantity }) => {
+    const cart = await updateCartItem(itemId, quantity);
+    return { content: [{ type: "text", text: JSON.stringify(cart) }] };
+  },
+);
+```
+
+### Model-only tool
+
+Set `visibility: ["model"]` for tools that the model can call but the View cannot:
+
+```ts
+registerAppTool(
+  server,
+  "show-cart",
+  {
+    description: "Display the user's shopping cart",
+    _meta: {
+      ui: {
+        resourceUri: "ui://shop/cart.html",
+        visibility: ["model"],
+      },
+    },
+  },
+  async () => {
+    const cart = await getCart();
+    return { content: [{ type: "text", text: JSON.stringify(cart) }] };
+  },
+);
+```
+
+## Metadata Normalization
+
+`registerAppTool` automatically normalizes between the current format (`_meta.ui.resourceUri`) and the deprecated flat key (`_meta["ui/resourceUri"]`) for backward compatibility with older hosts.

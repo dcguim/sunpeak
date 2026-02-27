@@ -422,6 +422,29 @@ export const resource: ResourceConfig = {
 };
 ```
 
+## AppProvider (Library Use)
+
+When using sunpeak as a library (without the CLI framework), wrap your app in `AppProvider` to establish the MCP connection:
+
+```tsx
+import { AppProvider, useApp } from 'sunpeak';
+
+// AppProvider handles App creation, PostMessageTransport, and connection
+createRoot(document.getElementById('root')!).render(
+  <AppProvider appInfo={{ name: 'MyApp', version: '1.0.0' }} capabilities={{}}>
+    <MyApp />
+  </AppProvider>
+);
+
+function MyApp() {
+  const app = useApp(); // Reads from AppProvider context
+  if (!app) return <div>Connecting...</div>;
+  return <div>Connected!</div>;
+}
+```
+
+When using the sunpeak CLI (`sunpeak dev` / `sunpeak build`), `AppProvider` wrapping is handled automatically by the framework's resource loader.
+
 ## Common Mistakes
 
 1. **Hooks before early returns** — All hooks must run unconditionally. Move `useMemo`/`useEffect` above any `if (...) return` blocks.
@@ -431,3 +454,10 @@ export const resource: ResourceConfig = {
 5. **Simulation name mismatch** — The simulation key is the filename without `-simulation.json`: `carousel-show-simulation.json` → `carousel-show`.
 6. **Mutating hook params** — Use `eslint-disable-next-line react-hooks/immutability` for `app.onteardown = ...` (class setter, not a mutation).
 7. **Forgetting text fallback** — Include `toolResult.content[]` in simulations for non-UI hosts.
+
+## References
+
+- [sunpeak Documentation](https://sunpeak.ai/docs)
+- [MCP Apps Documentation](https://sunpeak.ai/docs/mcp-apps/introduction)
+- [MCP Apps SDK](https://github.com/modelcontextprotocol/ext-apps)
+- [ChatGPT Apps SDK Design Guidelines](https://developers.openai.com/apps-sdk/concepts/design-guidelines)

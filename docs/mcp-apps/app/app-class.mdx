@@ -1,0 +1,149 @@
+---
+title: "MCP Apps App Class - Client-Side Host Communication"
+sidebarTitle: "App Class"
+description: "The App class for MCP Apps client-side communication. Connect via PostMessageTransport, access host context, capabilities, and version, and manage auto-resize behavior."
+keywords: ["MCP Apps", "ChatGPT Apps", "App class", "PostMessageTransport", "host communication", "client SDK"]
+---
+
+```ts
+import { App, PostMessageTransport } from "sunpeak";
+```
+
+<Note>
+In sunpeak, the [`useApp`](/mcp-apps/react/use-app) hook handles `App` creation and connection automatically. The details below are useful for understanding the underlying API or for non-React usage.
+</Note>
+
+## Overview
+
+The `App` class provides a framework-agnostic way to build interactive MCP Apps that run inside host applications. It extends the MCP SDK's `Protocol` class and handles the connection lifecycle, [initialization handshake](/mcp-apps/lifecycle#2-initialization), and bidirectional communication with the host.
+
+## Constructor
+
+```ts
+new App(appInfo, capabilities?, options?)
+```
+
+<ResponseField name="appInfo" type="Implementation" required>
+  App identification: `{ name: string; version: string }`.
+</ResponseField>
+
+<ResponseField name="capabilities" type="McpUiAppCapabilities" default="{}">
+  Features this app provides. Set `tools` to expose app-side tools to the host. Set `availableDisplayModes` to declare supported display modes.
+</ResponseField>
+
+<ResponseField name="options" type="AppOptions" default="{ autoResize: true }">
+  <ResponseField name="autoResize" type="boolean" default="true">
+    Automatically report size changes to the host using `ResizeObserver`.
+  </ResponseField>
+</ResponseField>
+
+```ts
+const app = new App(
+  { name: "MyApp", version: "1.0.0" },
+  { tools: { listChanged: true } },
+  { autoResize: true },
+);
+```
+
+## connect()
+
+Establishes connection with the host and performs the initialization handshake.
+
+```ts
+async connect(transport?: Transport, options?: RequestOptions): Promise<void>
+```
+
+Steps performed:
+1. Connects the transport layer
+2. Sends `ui/initialize` with app info and capabilities
+3. Receives host capabilities and context
+4. Sends `ui/notifications/initialized` (see [Lifecycle](/mcp-apps/lifecycle))
+5. Sets up auto-resize if enabled
+
+If no transport is provided, defaults to `new PostMessageTransport(window.parent, window.parent)`.
+
+```ts
+// Default transport (typical usage)
+await app.connect();
+
+// Custom transport
+await app.connect(new PostMessageTransport(window.parent, window.parent));
+```
+
+<Warning>
+Register event handlers **before** calling `connect()` to avoid missing notifications during the handshake.
+</Warning>
+
+## Accessors
+
+### getHostCapabilities()
+
+Returns the host's capabilities from the initialization handshake. `undefined` before connection.
+
+```ts
+await app.connect();
+if (app.getHostCapabilities()?.serverTools) {
+  console.log("Host supports server tool calls");
+}
+```
+
+### getHostVersion()
+
+Returns the host's name and version. `undefined` before connection.
+
+```ts
+const { name, version } = app.getHostVersion() ?? {};
+console.log(`Connected to ${name} v${version}`);
+```
+
+### getHostContext()
+
+Returns the current host context (theme, locale, display mode, etc.). Automatically updated when the host sends context change notifications.
+
+```ts
+const ctx = app.getHostContext();
+if (ctx?.theme === "dark") {
+  document.body.classList.add("dark-theme");
+}
+```
+
+## PostMessageTransport
+
+The transport layer for iframe-to-parent communication using `window.postMessage`. In most cases you never need to use this directly — `App.connect()` creates one automatically when no transport is provided.
+
+```ts
+import { PostMessageTransport } from "sunpeak";
+
+new PostMessageTransport(eventTarget?, eventSource)
+```
+
+| Method | Description |
+|--------|-------------|
+| `start()` | Begin listening for messages |
+| `send(message)` | Send a JSON-RPC message to the target |
+| `close()` | Stop listening and clean up |
+
+## Auto-Resize
+
+By default, `App` monitors `document.body` and `document.documentElement` for size changes and sends `ui/notifications/size-changed` to the host. Disable with `{ autoResize: false }`. In React, you can use the [`useAutoResize`](/mcp-apps/react/use-auto-resize) hook instead.
+
+### setupSizeChangedNotifications()
+
+Manually start auto-resize reporting. Returns a cleanup function. Automatically called by `connect()` when `autoResize: true`.
+
+```ts
+const app = new App({ name: "MyApp", version: "1.0.0" }, {}, { autoResize: false });
+await app.connect();
+
+// Later, enable auto-resize manually
+const cleanup = app.setupSizeChangedNotifications();
+cleanup(); // Stop observing
+```
+
+### sendSizeChanged()
+
+Manually notify the host of a size change:
+
+```ts
+app.sendSizeChanged({ width: 400, height: 600 });
+```

@@ -1,0 +1,157 @@
+---
+title: "MCP Apps Protocol Reference - Types & Schemas"
+sidebarTitle: "Protocol Reference"
+description: "Complete MCP Apps protocol reference: request and result types, notification types, method constants, union types (AppRequest, AppNotification, AppResult), and Zod validation schemas."
+keywords: ["MCP Apps", "ChatGPT Apps", "protocol reference", "request types", "notification types", "Zod schemas"]
+---
+
+```ts
+import type {
+  McpUiInitializeRequest,
+  McpUiInitializeResult,
+  McpUiOpenLinkRequest,
+  McpUiOpenLinkResult,
+  McpUiMessageRequest,
+  McpUiMessageResult,
+  McpUiUpdateModelContextRequest,
+  McpUiRequestDisplayModeRequest,
+  McpUiRequestDisplayModeResult,
+  McpUiResourceTeardownRequest,
+  McpUiResourceTeardownResult,
+  AppRequest,
+  AppNotification,
+  AppResult,
+} from "sunpeak";
+```
+
+## Request / Result Types
+
+### Initialization
+
+| Type | Method | Direction | Description |
+|------|--------|-----------|-------------|
+| `McpUiInitializeRequest` | `ui/initialize` | View → Host | App info, capabilities, protocol version |
+| `McpUiInitializeResult` | — | Host → View | Protocol version, host info, capabilities, context |
+
+### View → Host Requests
+
+| Type | Method | Description |
+|------|--------|-------------|
+| `McpUiOpenLinkRequest` | `ui/open-link` | Open URL: `{ url: string }` |
+| `McpUiOpenLinkResult` | — | `{ isError?: boolean }` |
+| `McpUiMessageRequest` | `ui/message` | Send message: `{ role: "user"; content: ContentBlock[] }` |
+| `McpUiMessageResult` | — | `{ isError?: boolean }` |
+| `McpUiUpdateModelContextRequest` | `ui/update-model-context` | Update context: `{ content?; structuredContent? }` |
+| `McpUiRequestDisplayModeRequest` | `ui/request-display-mode` | Request mode: `{ mode: McpUiDisplayMode }` |
+| `McpUiRequestDisplayModeResult` | — | `{ mode: McpUiDisplayMode }` (actual mode set) |
+
+### Host → View Requests
+
+| Type | Method | Description |
+|------|--------|-------------|
+| `McpUiResourceTeardownRequest` | `ui/resource-teardown` | Graceful shutdown: `{}` |
+| `McpUiResourceTeardownResult` | — | `{}` |
+
+## Notification Types
+
+### Host → View
+
+| Type | Method | Description |
+|------|--------|-------------|
+| `McpUiToolInputNotification` | `ui/notifications/tool-input` | Complete tool arguments |
+| `McpUiToolInputPartialNotification` | `ui/notifications/tool-input-partial` | Streaming partial arguments |
+| `McpUiToolResultNotification` | `ui/notifications/tool-result` | Tool execution result |
+| `McpUiToolCancelledNotification` | `ui/notifications/tool-cancelled` | Tool execution cancelled |
+| `McpUiHostContextChangedNotification` | `ui/notifications/host-context-changed` | Partial context update |
+
+### View → Host
+
+| Type | Method | Description |
+|------|--------|-------------|
+| `McpUiInitializedNotification` | `ui/notifications/initialized` | Initialization complete |
+| `McpUiSizeChangedNotification` | `ui/notifications/size-changed` | UI size change: `{ width?; height? }` |
+
+## Union Types
+
+These union types represent all possible message types in the protocol:
+
+| Type | Description |
+|------|-------------|
+| `AppRequest` | All request types (UI requests + proxied MCP server requests + ping) |
+| `AppNotification` | All notification types (both directions) |
+| `AppResult` | All result types |
+
+## Method Constants
+
+Type-safe string constants for protocol method names.
+
+```ts
+import {
+  INITIALIZE_METHOD,
+  INITIALIZED_METHOD,
+  OPEN_LINK_METHOD,
+  MESSAGE_METHOD,
+  REQUEST_DISPLAY_MODE_METHOD,
+  RESOURCE_TEARDOWN_METHOD,
+  SIZE_CHANGED_METHOD,
+  TOOL_INPUT_METHOD,
+  TOOL_INPUT_PARTIAL_METHOD,
+  TOOL_RESULT_METHOD,
+  TOOL_CANCELLED_METHOD,
+  HOST_CONTEXT_CHANGED_METHOD,
+} from "sunpeak";
+```
+
+| Constant | Value |
+|----------|-------|
+| `INITIALIZE_METHOD` | `"ui/initialize"` |
+| `INITIALIZED_METHOD` | `"ui/notifications/initialized"` |
+| `OPEN_LINK_METHOD` | `"ui/open-link"` |
+| `MESSAGE_METHOD` | `"ui/message"` |
+| `REQUEST_DISPLAY_MODE_METHOD` | `"ui/request-display-mode"` |
+| `RESOURCE_TEARDOWN_METHOD` | `"ui/resource-teardown"` |
+| `SIZE_CHANGED_METHOD` | `"ui/notifications/size-changed"` |
+| `TOOL_INPUT_METHOD` | `"ui/notifications/tool-input"` |
+| `TOOL_INPUT_PARTIAL_METHOD` | `"ui/notifications/tool-input-partial"` |
+| `TOOL_RESULT_METHOD` | `"ui/notifications/tool-result"` |
+| `TOOL_CANCELLED_METHOD` | `"ui/notifications/tool-cancelled"` |
+| `HOST_CONTEXT_CHANGED_METHOD` | `"ui/notifications/host-context-changed"` |
+
+## Other Constants
+
+| Constant | Value | Description |
+|----------|-------|-------------|
+| `LATEST_PROTOCOL_VERSION` | `"2026-01-26"` | Current protocol version |
+| `RESOURCE_MIME_TYPE` | `"text/html;profile=mcp-app"` | MIME type for MCP App resources |
+| `RESOURCE_URI_META_KEY` | `"ui/resourceUri"` | Deprecated metadata key for tool-resource linkage |
+| `EXTENSION_ID` | `"io.modelcontextprotocol/ui"` | Extension identifier for capability negotiation |
+
+## Zod Schemas
+
+Every type has a corresponding Zod schema exported for runtime validation:
+
+```ts
+import {
+  McpUiThemeSchema,
+  McpUiDisplayModeSchema,
+  McpUiHostContextSchema,
+  McpUiHostCapabilitiesSchema,
+  McpUiAppCapabilitiesSchema,
+  McpUiInitializeRequestSchema,
+  McpUiInitializeResultSchema,
+  McpUiToolInputNotificationSchema,
+  McpUiToolResultNotificationSchema,
+  McpUiToolCancelledNotificationSchema,
+  McpUiHostContextChangedNotificationSchema,
+  McpUiResourceTeardownRequestSchema,
+  McpUiResourceTeardownResultSchema,
+  McpUiResourceCspSchema,
+  McpUiResourcePermissionsSchema,
+  McpUiResourceMetaSchema,
+  McpUiToolVisibilitySchema,
+  McpUiToolMetaSchema,
+  // ... and more
+} from "sunpeak";
+```
+
+Schema names follow the pattern `{TypeName}Schema` (e.g., `McpUiTheme` → `McpUiThemeSchema`).

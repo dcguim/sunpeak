@@ -1,6 +1,7 @@
 ---
 title: "useUpdateModelContext"
 description: "Send model context updates to the host."
+keywords: ["MCP Apps", "ChatGPT Apps", "React hooks", "model context", "AI context"]
 ---
 
 ## Overview
@@ -8,6 +9,8 @@ description: "Send model context updates to the host."
 Returns a function to send model context updates to the host. Unlike `useAppState` (which automatically syncs structured state), this hook gives direct control over when and what is sent to the model context — including text content blocks.
 
 Each call overwrites the previous context. The host includes the last update in the model's next turn.
+
+See the [MCP Apps updateModelContext request](/mcp-apps/app/requests#updatemodelcontext) for protocol details.
 
 ## Import
 

@@ -1,0 +1,177 @@
+---
+title: "MCP Apps registerAppResource - HTML Resources"
+sidebarTitle: "registerAppResource"
+description: "Register HTML resources for MCP App Views. Configure content security policies (CSP), iframe permissions, resource URIs, and domain settings."
+keywords: ["MCP Apps", "ChatGPT Apps", "register resource", "HTML resource", "content security policy", "iframe"]
+---
+
+```ts
+import { registerAppResource, RESOURCE_MIME_TYPE } from "sunpeak/mcp";
+```
+
+## Overview
+
+`registerAppResource` is a convenience wrapper around the MCP SDK's `server.registerResource()` that defaults the MIME type to `RESOURCE_MIME_TYPE` (`"text/html;profile=mcp-app"`). Use it to register the HTML resources that your tools reference via [`_meta.ui.resourceUri`](/mcp-apps/server/register-app-tool).
+
+## Signature
+
+```ts
+function registerAppResource(
+  server: McpServer,
+  name: string,
+  uri: string,
+  config: McpUiAppResourceConfig,
+  readCallback: McpUiReadResourceCallback,
+): RegisteredResource
+```
+
+## Parameters
+
+<ResponseField name="server" type="McpServer" required>
+  The MCP server instance.
+</ResponseField>
+
+<ResponseField name="name" type="string" required>
+  Human-readable resource name.
+</ResponseField>
+
+<ResponseField name="uri" type="string" required>
+  Resource URI. Should match the `_meta.ui.resourceUri` in your tool config.
+</ResponseField>
+
+<ResponseField name="config" type="McpUiAppResourceConfig" required>
+  Resource configuration extending MCP SDK's `ResourceMetadata`.
+
+  <ResponseField name="description" type="string">
+    Human-readable resource description.
+  </ResponseField>
+  <ResponseField name="mimeType" type="string">
+    MIME type. Defaults to `RESOURCE_MIME_TYPE` if omitted.
+  </ResponseField>
+  <ResponseField name="_meta" type="object">
+    Optional UI metadata for the resource listing (static default for hosts to review at connection time).
+  </ResponseField>
+</ResponseField>
+
+<ResponseField name="readCallback" type="McpUiReadResourceCallback" required>
+  Callback that returns the resource contents. The `contents[]` items can include `_meta.ui` for per-read security configuration.
+</ResponseField>
+
+## Usage
+
+### Basic resource
+
+```ts
+registerAppResource(
+  server,
+  "Weather View",
+  "ui://weather/view.html",
+  {
+    description: "Interactive weather display",
+  },
+  async () => ({
+    contents: [
+      {
+        uri: "ui://weather/view.html",
+        mimeType: RESOURCE_MIME_TYPE,
+        text: await fs.readFile("dist/view.html", "utf-8"),
+      },
+    ],
+  }),
+);
+```
+
+### With CSP configuration
+
+Declare network domains your View needs in `_meta.ui.csp` on the `contents[]` items:
+
+```ts
+registerAppResource(
+  server,
+  "Music Player",
+  "ui://music/player.html",
+  {},
+  async () => ({
+    contents: [
+      {
+        uri: "ui://music/player.html",
+        mimeType: RESOURCE_MIME_TYPE,
+        text: musicPlayerHtml,
+        _meta: {
+          ui: {
+            csp: {
+              connectDomains: ["https://api.example.com"],
+              resourceDomains: ["https://cdn.example.com"],
+            },
+          },
+        },
+      },
+    ],
+  }),
+);
+```
+
+### With permissions
+
+Request browser capabilities like camera, microphone, geolocation, or clipboard access:
+
+```ts
+_meta: {
+  ui: {
+    permissions: {
+      microphone: {},
+      clipboardWrite: {},
+    },
+  },
+}
+```
+
+### With stable origin (domain)
+
+Use `_meta.ui.domain` to give your View a stable origin for CORS allowlists:
+
+```ts
+_meta: {
+  ui: {
+    csp: { connectDomains: ["https://api.example.com"] },
+    domain: APP_DOMAIN,  // e.g., "{hash}.claudemcpcontent.com"
+  },
+}
+```
+
+<Note>
+The `domain` format is host-specific. Check each host's documentation for the expected format.
+</Note>
+
+## CSP Reference
+
+CSP is set in the `contents[]` items returned by the read callback, not in the `registerAppResource` config.
+
+| Field | CSP Directive | Purpose |
+|-------|--------------|---------|
+| `connectDomains` | `connect-src` | fetch/XHR/WebSocket origins |
+| `resourceDomains` | `img-src`, `script-src`, `style-src`, `font-src`, `media-src` | Static resource origins |
+| `frameDomains` | `frame-src` | Nested iframe origins |
+| `baseUriDomains` | `base-uri` | Allowed base URIs |
+
+## Permissions Reference
+
+| Field | Permission Policy | Purpose |
+|-------|------------------|---------|
+| `camera` | `camera` | Camera access |
+| `microphone` | `microphone` | Microphone access |
+| `geolocation` | `geolocation` | Location access |
+| `clipboardWrite` | `clipboard-write` | Clipboard write access |
+
+## Other Resource Options
+
+<ResponseField name="prefersBorder" type="boolean">
+  Visual boundary preference. `true` requests a visible border and background from the host; `false` requests none. Omit to let the host decide.
+</ResponseField>
+
+## Constants
+
+| Constant | Value | Description |
+|----------|-------|-------------|
+| `RESOURCE_MIME_TYPE` | `"text/html;profile=mcp-app"` | MIME type for MCP App UI resources |
+| `RESOURCE_URI_META_KEY` | `"ui/resourceUri"` | Deprecated metadata key for tool-resource linkage |

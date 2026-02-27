@@ -217,6 +217,6 @@ npx skills add Sunpeak-AI/sunpeak@create-sunpeak-app
 
 ## Resources
 
-- [MCP Apps](https://github.com/modelcontextprotocol/ext-apps)
-- [MCP Apps SDK Design Guidelines](https://developers.openai.com/apps-sdk/concepts/design-guidelines)
-- [MCP Apps SDK Documentation - UI](https://developers.openai.com/apps-sdk/build/chatgpt-ui)
+- [MCP Apps Documentation](https://sunpeak.ai/docs/mcp-apps/introduction)
+- [MCP Apps SDK](https://github.com/modelcontextprotocol/ext-apps)
+- [ChatGPT Apps SDK Design Guidelines](https://developers.openai.com/apps-sdk/concepts/design-guidelines)

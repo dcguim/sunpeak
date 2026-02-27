@@ -1,0 +1,233 @@
+---
+title: "MCP Apps Core Types - TypeScript Type Reference"
+sidebarTitle: "Core Types"
+description: "TypeScript type reference for MCP Apps: McpUiHostContext, McpUiTheme, McpUiDisplayMode, McpUiHostCapabilities, McpUiAppCapabilities, McpUiHostStyles, CSP, permissions, and metadata types."
+keywords: ["MCP Apps", "ChatGPT Apps", "TypeScript types", "McpUiHostContext", "McpUiTheme", "type reference"]
+---
+
+```ts
+import type {
+  McpUiHostContext,
+  McpUiHostCapabilities,
+  McpUiAppCapabilities,
+  McpUiClientCapabilities,
+  McpUiTheme,
+  McpUiDisplayMode,
+  McpUiStyles,
+  McpUiStyleVariableKey,
+  McpUiHostStyles,
+  McpUiHostCss,
+  McpUiToolMeta,
+  McpUiToolVisibility,
+  McpUiResourceMeta,
+  McpUiResourceCsp,
+  McpUiResourcePermissions,
+  McpUiSupportedContentBlockModalities,
+} from "sunpeak";
+```
+
+## McpUiHostContext
+
+Rich context about the host environment, provided during initialization and updated via `onhostcontextchanged`.
+
+```ts
+interface McpUiHostContext {
+  toolInfo?: {
+    id?: RequestId;
+    tool: Tool;
+  };
+  theme?: McpUiTheme;
+  styles?: McpUiHostStyles;
+  displayMode?: McpUiDisplayMode;
+  availableDisplayModes?: McpUiDisplayMode[];
+  containerDimensions?: {
+    width?: number;
+    maxWidth?: number;
+    height?: number;
+    maxHeight?: number;
+  };
+  locale?: string;           // BCP 47 format (e.g., "en-US")
+  timeZone?: string;         // IANA format (e.g., "America/New_York")
+  userAgent?: string;        // Host application identifier
+  platform?: "web" | "desktop" | "mobile";
+  deviceCapabilities?: {
+    touch?: boolean;
+    hover?: boolean;
+  };
+  safeAreaInsets?: {
+    top: number;
+    right: number;
+    bottom: number;
+    left: number;
+  };
+}
+```
+
+## McpUiHostCapabilities
+
+Capabilities supported by the host, received during initialization.
+
+```ts
+interface McpUiHostCapabilities {
+  experimental?: {};
+  openLinks?: {};
+  downloadFile?: {};
+  serverTools?: { listChanged?: boolean };
+  serverResources?: { listChanged?: boolean };
+  logging?: {};
+  sandbox?: {
+    permissions?: McpUiResourcePermissions;
+    csp?: McpUiResourceCsp;
+  };
+  updateModelContext?: McpUiSupportedContentBlockModalities;
+  message?: McpUiSupportedContentBlockModalities;
+}
+```
+
+| Field | Description |
+|-------|-------------|
+| `openLinks` | Host supports `openLink()` |
+| `downloadFile` | Host supports `downloadFile()` |
+| `serverTools` | Host can proxy `callServerTool()` to the MCP server |
+| `serverResources` | Host can proxy `resources/read` to the MCP server |
+| `logging` | Host accepts `sendLog()` messages |
+| `sandbox` | Permissions and CSP applied by the host |
+| `updateModelContext` | Host accepts `updateModelContext()` |
+| `message` | Host accepts `sendMessage()` |
+
+## McpUiAppCapabilities
+
+Capabilities provided by the View, sent during initialization.
+
+```ts
+interface McpUiAppCapabilities {
+  experimental?: {};
+  tools?: { listChanged?: boolean };
+  availableDisplayModes?: McpUiDisplayMode[];
+}
+```
+
+| Field | Description |
+|-------|-------------|
+| `tools` | App exposes tools that the host can call via `oncalltool` |
+| `availableDisplayModes` | Display modes the app supports |
+
+## McpUiClientCapabilities
+
+Advertised by hosts to servers via the MCP `extensions` field. Used with `getUiCapability()`.
+
+```ts
+interface McpUiClientCapabilities {
+  mimeTypes?: string[];  // Must include "text/html;profile=mcp-app"
+}
+```
+
+## McpUiTheme
+
+```ts
+type McpUiTheme = "light" | "dark";
+```
+
+## McpUiDisplayMode
+
+```ts
+type McpUiDisplayMode = "inline" | "fullscreen" | "pip";
+```
+
+## McpUiHostStyles
+
+```ts
+interface McpUiHostStyles {
+  variables?: McpUiStyles;
+  css?: McpUiHostCss;
+}
+```
+
+## McpUiHostCss
+
+```ts
+interface McpUiHostCss {
+  fonts?: string;  // @font-face rules or @import statements
+}
+```
+
+## McpUiStyles
+
+A record mapping CSS variable names to string values. All keys are optional.
+
+```ts
+type McpUiStyles = Record<McpUiStyleVariableKey, string | undefined>;
+```
+
+See [CSS Variables](/mcp-apps/styling/css-variables) for the full list of variable keys.
+
+## McpUiToolMeta
+
+UI metadata for tools, set in `_meta.ui` of tool configuration.
+
+```ts
+interface McpUiToolMeta {
+  resourceUri?: string;
+  visibility?: McpUiToolVisibility[];  // Default: ["model", "app"]
+}
+```
+
+## McpUiToolVisibility
+
+```ts
+type McpUiToolVisibility = "model" | "app";
+```
+
+## McpUiResourceMeta
+
+UI metadata for resources, set in `_meta.ui` of resource content items.
+
+```ts
+interface McpUiResourceMeta {
+  csp?: McpUiResourceCsp;
+  permissions?: McpUiResourcePermissions;
+  domain?: string;
+  prefersBorder?: boolean;
+}
+```
+
+## McpUiResourceCsp
+
+Content Security Policy configuration.
+
+```ts
+interface McpUiResourceCsp {
+  connectDomains?: string[];     // fetch/XHR/WebSocket origins
+  resourceDomains?: string[];    // img/script/style/font/media origins
+  frameDomains?: string[];       // Nested iframe origins
+  baseUriDomains?: string[];     // Allowed base URIs
+}
+```
+
+## McpUiResourcePermissions
+
+Browser capabilities requested by the resource.
+
+```ts
+interface McpUiResourcePermissions {
+  camera?: {};
+  microphone?: {};
+  geolocation?: {};
+  clipboardWrite?: {};
+}
+```
+
+## McpUiSupportedContentBlockModalities
+
+Content block types supported by the host for `sendMessage` and `updateModelContext`.
+
+```ts
+interface McpUiSupportedContentBlockModalities {
+  text?: {};
+  image?: {};
+  audio?: {};
+  resource?: {};
+  resourceLink?: {};
+  structuredContent?: {};
+}
+```

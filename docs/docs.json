@@ -7,7 +7,7 @@
     "light": "#ffb800",
     "dark": "#000000"
   },
-  "favicon": "/favicon.svg",
+  "favicon": "/favicon.png",
   "navigation": {
     "tabs": [
       {
@@ -120,6 +120,58 @@
             ]
           }
         ]
+      },
+      {
+        "tab": "MCP Apps",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "mcp-apps/introduction",
+              "mcp-apps/lifecycle"
+            ]
+          },
+          {
+            "group": "Server API",
+            "pages": [
+              "mcp-apps/server/register-app-tool",
+              "mcp-apps/server/register-app-resource",
+              "mcp-apps/server/capability-detection"
+            ]
+          },
+          {
+            "group": "App API",
+            "pages": [
+              "mcp-apps/app/app-class",
+              "mcp-apps/app/event-handlers",
+              "mcp-apps/app/requests"
+            ]
+          },
+          {
+            "group": "Styling",
+            "pages": [
+              "mcp-apps/styling/theme",
+              "mcp-apps/styling/css-variables",
+              "mcp-apps/styling/fonts"
+            ]
+          },
+          {
+            "group": "React Hooks",
+            "pages": [
+              "mcp-apps/react/use-app",
+              "mcp-apps/react/use-host-styles",
+              "mcp-apps/react/use-document-theme",
+              "mcp-apps/react/use-auto-resize"
+            ]
+          },
+          {
+            "group": "Types & Constants",
+            "pages": [
+              "mcp-apps/types/core-types",
+              "mcp-apps/types/protocol-reference"
+            ]
+          }
+        ]
       }
     ],
     "global": {
@@ -151,7 +203,7 @@
     "links": [
       {
         "label": "Source",
-        "href": "https://github.com/Sunpeak-AI/sunpeak-docs"
+        "href": "https://github.com/Sunpeak-AI/sunpeak/tree/main/docs"
       }
     ]
   },
@@ -188,7 +240,7 @@
     "family": "Geist"
   },
   "thumbnails": {
-    "background": "/images/Bg.png",
+    "background": "/images/bg.png",
     "appearance": "dark"
   }
 }

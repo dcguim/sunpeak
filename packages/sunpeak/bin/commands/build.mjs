@@ -59,6 +59,11 @@ export async function build(projectRoot = process.cwd()) {
     process.exit(1);
   }
 
+  // Read project identity from package.json for appInfo
+  const pkg = JSON.parse(readFileSync(pkgJsonPath, 'utf-8'));
+  const appName = pkg.name || 'sunpeak-app';
+  const appVersion = pkg.version || '0.1.0';
+
   // Check if we're in the sunpeak workspace (directory is named "template")
   const isTemplate = path.basename(projectRoot) === 'template';
   const parentSrc = path.resolve(projectRoot, '../src');
@@ -218,7 +223,7 @@ export async function build(projectRoot = process.cwd()) {
       // Create entry file from template in temp directory
       const entryContent = template
         .replace('// RESOURCE_IMPORT', `import { ${componentName}, resource } from '../src/resources/${kebabName}/${componentFile}';`)
-        .replace('// RESOURCE_MOUNT', `createRoot(root).render(<AppProvider appInfo={{ name: resource.name, version: '1.0.0' }}><${componentName} /></AppProvider>);`);
+        .replace('// RESOURCE_MOUNT', `createRoot(root).render(<AppProvider appInfo={{ name: ${JSON.stringify(appName)}, version: ${JSON.stringify(appVersion)} }}><${componentName} /></AppProvider>);`);
 
       const entryPath = path.join(projectRoot, entry);
       writeFileSync(entryPath, entryContent);

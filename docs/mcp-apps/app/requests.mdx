@@ -1,0 +1,223 @@
+---
+title: "MCP Apps Requests - View-to-Host API"
+sidebarTitle: "Requests"
+description: "Make requests from an MCP App View to the host: call server tools, send messages, update model context, open links, download files, request display modes, and send logs."
+keywords: ["MCP Apps", "ChatGPT Apps", "app requests", "server tools", "send message", "model context"]
+---
+
+```ts
+import { App } from "sunpeak";
+```
+
+<Note>
+sunpeak provides convenience hooks for most of these methods: [`useCallServerTool`](/api-reference/hooks/use-call-server-tool), [`useSendMessage`](/api-reference/hooks/use-send-message), [`useUpdateModelContext`](/api-reference/hooks/use-update-model-context), [`useOpenLink`](/api-reference/hooks/use-open-link), [`useRequestDisplayMode`](/api-reference/hooks/use-request-display-mode), and [`useSendLog`](/api-reference/hooks/use-send-log). Use those instead of calling `app` methods directly in React components.
+</Note>
+
+## Overview
+
+The `App` class provides methods for the View to make requests to the host. The host proxies server requests to the MCP server and handles UI requests directly. For handling incoming host events, see [Event Handlers](/mcp-apps/app/event-handlers).
+
+## callServerTool
+
+Call a tool on the originating MCP server (proxied through the host).
+
+```ts
+async callServerTool(
+  params: { name: string; arguments?: Record<string, unknown> },
+  options?: RequestOptions,
+): Promise<CallToolResult>
+```
+
+```ts
+const result = await app.callServerTool({
+  name: "get_weather",
+  arguments: { location: "Tokyo" },
+});
+
+if (result.isError) {
+  console.error("Tool returned error:", result.content);
+} else {
+  console.log(result.structuredContent);
+}
+```
+
+<Note>
+Tool-level execution errors are returned in the result with `isError: true` rather than throwing exceptions. Transport or protocol failures throw. Always check `result.isError`.
+</Note>
+
+## sendMessage
+
+Send a message to the host's chat interface.
+
+```ts
+async sendMessage(
+  params: { role: "user"; content: ContentBlock[] },
+  options?: RequestOptions,
+): Promise<{ isError?: boolean }>
+```
+
+```ts
+const result = await app.sendMessage({
+  role: "user",
+  content: [{ type: "text", text: "Show me details for item #42" }],
+});
+
+if (result.isError) {
+  console.error("Host rejected the message");
+}
+```
+
+## updateModelContext
+
+Update the host's model context with app state. Context is available to the model in future turns without triggering an immediate response. Each call overwrites any previous context.
+
+```ts
+async updateModelContext(
+  params: {
+    content?: ContentBlock[];
+    structuredContent?: Record<string, unknown>;
+  },
+  options?: RequestOptions,
+): Promise<void>
+```
+
+```ts
+await app.updateModelContext({
+  content: [{
+    type: "text",
+    text: `User is viewing page ${currentPage} of ${totalPages}`,
+  }],
+});
+```
+
+<Tip>
+For large follow-up messages, offload data to `updateModelContext` first, then send a brief trigger via `sendMessage`:
+
+```ts
+await app.updateModelContext({
+  content: [{ type: "text", text: fullTranscript }],
+});
+await app.sendMessage({
+  role: "user",
+  content: [{ type: "text", text: "Summarize the key points" }],
+});
+```
+</Tip>
+
+## openLink
+
+Request the host to open an external URL in the browser.
+
+```ts
+async openLink(
+  params: { url: string },
+  options?: RequestOptions,
+): Promise<{ isError?: boolean }>
+```
+
+```ts
+const { isError } = await app.openLink({
+  url: "https://docs.example.com",
+});
+if (isError) {
+  console.warn("Link request denied by host");
+}
+```
+
+## downloadFile
+
+Request the host to download a file. Since MCP Apps run in sandboxed iframes where direct downloads are blocked, this provides a host-mediated mechanism.
+
+```ts
+async downloadFile(
+  params: { contents: (EmbeddedResource | ResourceLink)[] },
+  options?: RequestOptions,
+): Promise<{ isError?: boolean }>
+```
+
+```ts
+// Download embedded text content
+await app.downloadFile({
+  contents: [{
+    type: "resource",
+    resource: {
+      uri: "file:///export.json",
+      mimeType: "application/json",
+      text: JSON.stringify(data, null, 2),
+    },
+  }],
+});
+
+// Download embedded binary content
+await app.downloadFile({
+  contents: [{
+    type: "resource",
+    resource: {
+      uri: "file:///image.png",
+      mimeType: "image/png",
+      blob: base64EncodedPng,
+    },
+  }],
+});
+
+// Download via resource link (host fetches)
+await app.downloadFile({
+  contents: [{
+    type: "resource_link",
+    uri: "https://api.example.com/reports/q4.pdf",
+    name: "Q4 Report",
+    mimeType: "application/pdf",
+  }],
+});
+```
+
+## requestDisplayMode
+
+Request the host to change the display mode.
+
+```ts
+async requestDisplayMode(
+  params: { mode: McpUiDisplayMode },
+  options?: RequestOptions,
+): Promise<{ mode: McpUiDisplayMode }>
+```
+
+The returned `mode` is the mode actually set — it may differ from the requested mode if unsupported.
+
+```ts
+const ctx = app.getHostContext();
+const newMode = ctx?.displayMode === "inline" ? "fullscreen" : "inline";
+
+if (ctx?.availableDisplayModes?.includes(newMode)) {
+  const result = await app.requestDisplayMode({ mode: newMode });
+  container.classList.toggle("fullscreen", result.mode === "fullscreen");
+}
+```
+
+## sendLog
+
+Send log messages to the host for debugging. Logs are not added to the conversation.
+
+```ts
+sendLog(params: { level: string; data: string; logger?: string }): Promise<void>
+```
+
+```ts
+app.sendLog({
+  level: "info",
+  data: "Weather data refreshed",
+  logger: "WeatherApp",
+});
+```
+
+## sendSizeChanged
+
+Manually notify the host of a UI size change. If `autoResize` is enabled (default), this is called automatically.
+
+```ts
+sendSizeChanged(params: { width?: number; height?: number }): Promise<void>
+```
+
+```ts
+app.sendSizeChanged({ width: 400, height: 600 });
+```

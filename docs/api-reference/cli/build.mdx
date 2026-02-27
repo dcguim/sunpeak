@@ -1,6 +1,7 @@
 ---
 title: "sunpeak build"
 description: "Build optimized production bundles for deployment."
+keywords: ["MCP Apps", "ChatGPT Apps", "production build", "deployment", "bundling"]
 ---
 
 ## Overview
@@ -63,6 +64,23 @@ The build extracts the `resource` export from each `*-resource.tsx` file and wri
 ```
 
 The `uri` is generated using the resource name and a build timestamp for cache invalidation.
+
+## App Identity
+
+Each built resource is wrapped in an `AppProvider` that identifies the app to the host during the `ui/initialize` handshake. The `name` and `version` are read from your project's `package.json`:
+
+```json
+{
+  "name": "my-weather-app",
+  "version": "1.2.0"
+}
+```
+
+All resources in the project share the same app identity. This means a project with `search`, `calendar`, and `map` resources will all report `appInfo: { name: "my-weather-app", version: "1.2.0" }` to the host.
+
+<Tip>
+The resource name is conveyed separately through the MCP resource registration, not through `appInfo`. Think of `appInfo` as the **server identity** and the resource name as the **view identity**.
+</Tip>
 
 ## Build Optimizations
 

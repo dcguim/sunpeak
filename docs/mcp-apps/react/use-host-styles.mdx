@@ -1,0 +1,102 @@
+---
+title: "MCP Apps useHostStyles - React Theming Hooks"
+sidebarTitle: "useHostStyles"
+description: "React hooks for applying host styles in MCP Apps: useHostStyles (all-in-one), useHostStyleVariables for CSS variables, useHostFonts for typography, and useDocumentTheme for themes."
+keywords: ["MCP Apps", "ChatGPT Apps", "React hooks", "useHostStyles", "CSS variables", "theming"]
+---
+
+```ts
+import { useHostStyles, useHostStyleVariables, useHostFonts } from "sunpeak";
+```
+
+## useHostStyles
+
+Convenience hook combining `useHostStyleVariables` and `useHostFonts`. Applies all host styling — CSS variables, theme, and fonts.
+
+### Signature
+
+```ts
+function useHostStyles(
+  app: App | null,
+  initialContext?: McpUiHostContext | null,
+): void
+```
+
+### Usage
+
+```tsx
+function MyApp() {
+  const app = useApp();
+
+  useHostStyles(app, app?.getHostContext());
+
+  return (
+    <div style={{ background: "var(--color-background-primary)" }}>
+      Hello!
+    </div>
+  );
+}
+```
+
+## useHostStyleVariables
+
+Applies host CSS variables and theme. Listens for `onhostcontextchanged` and applies updates automatically.
+
+### Signature
+
+```ts
+function useHostStyleVariables(
+  app: App | null,
+  initialContext?: McpUiHostContext | null,
+): void
+```
+
+<ResponseField name="app" type="App | null" required>
+  The connected `App` instance from `useApp`, or `null` during initialization.
+</ResponseField>
+
+<ResponseField name="initialContext" type="McpUiHostContext | null">
+  Initial host context from `app?.getHostContext()`. Pass this to apply styles immediately on mount without waiting for the first context change notification.
+</ResponseField>
+
+### What it applies
+
+- `styles.variables` — CSS custom properties via `applyHostStyleVariables()`
+- `theme` — `data-theme` attribute and `color-scheme` via `applyDocumentTheme()`
+
+## useHostFonts
+
+Applies host font CSS. Listens for `onhostcontextchanged` and applies font updates automatically.
+
+### Signature
+
+```ts
+function useHostFonts(
+  app: App | null,
+  initialContext?: McpUiHostContext | null,
+): void
+```
+
+### What it applies
+
+- `styles.css.fonts` — Injected as a `<style>` tag via `applyHostFonts()`
+
+### Usage
+
+```tsx
+function MyApp() {
+  const app = useApp();
+
+  useHostFonts(app, app?.getHostContext());
+
+  return <div style={{ fontFamily: "var(--font-sans)" }}>Hello!</div>;
+}
+```
+
+## When to Use Which
+
+| Hook | Applies |
+|------|---------|
+| `useHostStyles` | CSS variables + theme + fonts (recommended) |
+| `useHostStyleVariables` | CSS variables + theme only |
+| `useHostFonts` | Fonts only |
