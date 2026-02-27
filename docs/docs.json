@@ -4,8 +4,8 @@
   "name": "sunpeak",
   "colors": {
     "primary": "#000035",
-    "light": "#FFB800",
-    "dark": "#000035"
+    "light": "#ffb800",
+    "dark": "#000000"
   },
   "favicon": "/favicon.svg",
   "navigation": {
@@ -144,7 +144,8 @@
   },
   "logo": {
     "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
+    "dark": "/logo/dark.svg",
+    "href": "https://sunpeak.ai"
   },
   "navbar": {
     "links": [
@@ -171,5 +172,19 @@
       "github": "https://github.com/Sunpeak-AI/sunpeak",
       "website": "https://sunpeak.ai"
     }
+  },
+  "background": {
+    "decoration": "grid",
+    "color": {
+      "light": "#ffffff",
+      "dark": "#000000"
+    }
+  },
+  "appearance": {
+    "strict": false,
+    "default": "system"
+  },
+  "fonts": {
+    "family": "Geist"
   }
 }
