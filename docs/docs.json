@@ -186,5 +186,9 @@
   },
   "fonts": {
     "family": "Geist"
+  },
+  "thumbnails": {
+    "background": "/images/Bg.png",
+    "appearance": "dark"
   }
 }
