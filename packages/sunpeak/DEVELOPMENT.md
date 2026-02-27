@@ -1,6 +1,6 @@
 # Development Guide
 
-Refer to the [documentation](https://sunpeak.ai/docs/) to ramp up on sunpeak.
+Refer to the [documentation](https://sunpeak.ai/docs) to ramp up on sunpeak.
 
 ## Quickstart
 

@@ -23,7 +23,7 @@ Quickstart, build, test, and ship your Claude or ChatGPT App!
 [Demo (Hosted)](https://sunpeak.ai/simulator) ~
 [Demo (Video)](https://cdn.sunpeak.ai/sunpeak-demo-prod.mp4) ~
 [Discord (NEW)](https://discord.gg/FB2QNXqRnw) ~
-[Documentation](https://sunpeak.ai/docs/) ~
+[Documentation](https://sunpeak.ai/docs) ~
 [GitHub](https://github.com/Sunpeak-AI/sunpeak)
 
 <div align="center">
