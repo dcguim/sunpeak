@@ -333,15 +333,14 @@ const CORS_HEADERS = {
   'Access-Control-Expose-Headers': 'mcp-session-id',
 } as const;
 
-// Periodically clean up idle sessions
+// Periodically clean up idle sessions.
+// Closing the server triggers transport.onclose which handles session map cleanup.
 const cleanupInterval = setInterval(() => {
   const now = Date.now();
   for (const [id, session] of sessions) {
     if (now - session.lastActivity > SESSION_IDLE_TIMEOUT_MS) {
-      sessions.delete(id);
-      session.transport.close?.();
-      session.server.close();
-      console.log(`[MCP] Session expired: ${id.substring(0, 8)}... (${sessions.size} active)`);
+      console.log(`[MCP] Session expired: ${id.substring(0, 8)}...`);
+      void session.server.close();
     }
   }
 }, 60_000);
@@ -425,13 +424,12 @@ async function handleMcpRequest(
       console.error(`[MCP] Transport error${id ? ` (${id.substring(0, 8)}...)` : ''}:`, error);
     };
 
-    transport.onclose = async () => {
+    transport.onclose = () => {
       const id = transport.sessionId;
       if (id && sessions.has(id)) {
         sessions.delete(id);
         console.log(`[MCP] Session closed: ${id.substring(0, 8)}... (${sessions.size} active)`);
       }
-      await server.close();
     };
 
     await server.connect(transport);

@@ -304,15 +304,14 @@ export function createMcpHandler(
   const sessions = new Map<string, Session>();
   const authFn = config.auth;
 
-  // Periodically clean up idle sessions
+  // Periodically clean up idle sessions.
+  // Closing the server triggers transport.onclose which handles session map cleanup.
   const cleanupInterval = setInterval(() => {
     const now = Date.now();
     for (const [id, session] of sessions) {
       if (now - session.lastActivity > SESSION_IDLE_TIMEOUT_MS) {
-        sessions.delete(id);
-        session.transport.close?.();
-        session.server.close();
-        console.log(`[MCP] Session expired: ${id.substring(0, 8)}... (${sessions.size} active)`);
+        console.log(`[MCP] Session expired: ${id.substring(0, 8)}...`);
+        void session.server.close();
       }
     }
   }, 60_000);
@@ -412,14 +411,14 @@ export function createMcpHandler(
         console.error(`[MCP] Transport error${id ? ` (${id.substring(0, 8)}...)` : ''}:`, error);
       };
 
-      // Fallback cleanup for unexpected disconnects
-      transport.onclose = async () => {
+      // Clean up session map on disconnect (don't call server.close — it triggers
+      // transport.close which calls onclose again, causing infinite recursion)
+      transport.onclose = () => {
         const id = transport.sessionId;
         if (id && sessions.has(id)) {
           sessions.delete(id);
           console.log(`[MCP] Session closed: ${id.substring(0, 8)}... (${sessions.size} active)`);
         }
-        await server.close();
       };
 
       await server.connect(transport);
@@ -476,15 +475,14 @@ export function createHandler(config: WebHandlerConfig): (req: Request) => Promi
   const sessions = new Map<string, WebSession>();
   const authFn = config.auth;
 
-  // Periodically clean up idle sessions
+  // Periodically clean up idle sessions.
+  // Closing the server triggers transport.onclose which handles session map cleanup.
   const cleanupInterval = setInterval(() => {
     const now = Date.now();
     for (const [id, session] of sessions) {
       if (now - session.lastActivity > SESSION_IDLE_TIMEOUT_MS) {
-        sessions.delete(id);
-        session.transport.close?.();
-        session.server.close();
-        console.log(`[MCP] Session expired: ${id.substring(0, 8)}... (${sessions.size} active)`);
+        console.log(`[MCP] Session expired: ${id.substring(0, 8)}...`);
+        void session.server.close();
       }
     }
   }, 60_000);
@@ -552,12 +550,11 @@ export function createHandler(config: WebHandlerConfig): (req: Request) => Promi
         console.error('[MCP] Transport error:', error);
       };
 
-      transport.onclose = async () => {
+      transport.onclose = () => {
         const id = transport.sessionId;
         if (id && sessions.has(id)) {
           sessions.delete(id);
         }
-        await server.close();
       };
 
       await server.connect(transport);
