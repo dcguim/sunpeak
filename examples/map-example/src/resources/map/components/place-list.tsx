@@ -1,6 +1,6 @@
 import * as React from 'react';
-import { Settings } from '../../../components/icon';
-import { cn } from '../../../lib/index';
+import { Settings } from '@/components/icon';
+import { cn } from '@/lib/index';
 import { PlaceCard } from './place-card';
 import type { Place } from './types';
 

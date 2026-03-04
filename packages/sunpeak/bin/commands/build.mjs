@@ -241,6 +241,7 @@ export async function build(projectRoot = process.cwd()) {
         resolve: {
           conditions: ['style', 'import', 'module', 'browser', 'default'],
           alias: {
+            '@': path.resolve(projectRoot, 'src'),
             // In workspace dev mode, use local sunpeak source
             ...(isTemplate && {
               sunpeak: parentSrc,

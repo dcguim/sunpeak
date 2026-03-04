@@ -19,7 +19,7 @@ export function Avatar({ imageUrl, name, size = 32, className }: AvatarProps) {
       {imageUrl && !imgError ? (
         <img
           src={imageUrl}
-          alt={name ?? ''}
+          alt={name ?? 'Avatar'}
           className="w-full h-full object-cover"
           onError={() => setImgError(true)}
         />

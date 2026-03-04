@@ -7,8 +7,8 @@ import {
   SafeArea,
 } from 'sunpeak';
 import type { ResourceConfig } from 'sunpeak';
-import { Button } from '../../components/button';
-import { ExpandLg } from '../../components/icon';
+import { Button } from '@/components/button';
+import { ExpandLg } from '@/components/icon';
 
 export const resource: ResourceConfig = {
   title: 'Review',
@@ -77,15 +77,14 @@ interface Alert {
   message: string;
 }
 
-/** Content section - supports multiple display types */
-interface Section {
-  /** Optional section title */
-  title?: string;
-  /** Section content type */
-  type: 'details' | 'items' | 'changes' | 'preview' | 'summary';
-  /** Content data (type depends on section type) */
-  content: Detail[] | Item[] | Change[] | string;
-}
+/** Content section - discriminated union ensures type-safe content access */
+type Section = { title?: string } & (
+  | { type: 'details'; content: Detail[] }
+  | { type: 'items'; content: Item[] }
+  | { type: 'changes'; content: Change[] }
+  | { type: 'preview'; content: string }
+  | { type: 'summary'; content: Detail[] }
+);
 
 /** Tool call configuration for domain-specific review actions */
 interface ReviewTool {
@@ -128,17 +127,45 @@ interface ReviewState {
 // ============================================================================
 
 const changeTypeConfig = {
-  create: { icon: '+', color: '#16a34a', bg: '#f0fdf4' },
-  modify: { icon: '~', color: '#ca8a04', bg: '#fefce8' },
-  delete: { icon: '\u2212', color: '#dc2626', bg: '#fef2f2' },
-  action: { icon: '\u2192', color: '#2563eb', bg: '#eff6ff' },
+  create: { icon: '+', color: 'light-dark(#16a34a, #4ade80)', bg: 'light-dark(#f0fdf4, #052e16)' },
+  modify: { icon: '~', color: 'light-dark(#ca8a04, #facc15)', bg: 'light-dark(#fefce8, #422006)' },
+  delete: {
+    icon: '\u2212',
+    color: 'light-dark(#dc2626, #f87171)',
+    bg: 'light-dark(#fef2f2, #450a0a)',
+  },
+  action: {
+    icon: '\u2192',
+    color: 'light-dark(#2563eb, #60a5fa)',
+    bg: 'light-dark(#eff6ff, #172554)',
+  },
 };
 
 const alertTypeConfig = {
-  info: { icon: '\u2139', bg: '#eff6ff', border: '#bfdbfe', text: '#1e40af' },
-  warning: { icon: '\u26A0', bg: '#fefce8', border: '#fde047', text: '#a16207' },
-  error: { icon: '\u2715', bg: '#fef2f2', border: '#fecaca', text: '#b91c1c' },
-  success: { icon: '\u2713', bg: '#f0fdf4', border: '#bbf7d0', text: '#15803d' },
+  info: {
+    icon: '\u2139',
+    bg: 'light-dark(#eff6ff, #172554)',
+    border: 'light-dark(#bfdbfe, #1e3a5f)',
+    text: 'light-dark(#1e40af, #93c5fd)',
+  },
+  warning: {
+    icon: '\u26A0',
+    bg: 'light-dark(#fefce8, #422006)',
+    border: 'light-dark(#fde047, #854d0e)',
+    text: 'light-dark(#a16207, #fde047)',
+  },
+  error: {
+    icon: '\u2715',
+    bg: 'light-dark(#fef2f2, #450a0a)',
+    border: 'light-dark(#fecaca, #7f1d1d)',
+    text: 'light-dark(#b91c1c, #fca5a5)',
+  },
+  success: {
+    icon: '\u2713',
+    bg: 'light-dark(#f0fdf4, #052e16)',
+    border: 'light-dark(#bbf7d0, #14532d)',
+    text: 'light-dark(#15803d, #86efac)',
+  },
 };
 
 function DetailsSection({ content }: { content: Detail[] }) {
@@ -228,7 +255,7 @@ function ChangesSection({ content }: { content: Change[] }) {
           >
             <div className="flex items-start gap-3">
               <span
-                className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded font-mono font-bold bg-white"
+                className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded font-mono font-bold bg-[var(--color-background-primary)]"
                 style={{
                   color: config.color,
                   borderWidth: 1,
@@ -244,7 +271,7 @@ function ChangesSection({ content }: { content: Change[] }) {
                     {change.path}
                   </code>
                 )}
-                <p className="text-sm text-[#000000]">{change.description}</p>
+                <p className="text-sm text-[var(--color-text-primary)]">{change.description}</p>
                 {change.details && (
                   <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
                     {change.details}
@@ -299,17 +326,15 @@ function SectionRenderer({ section }: { section: Section }) {
   const renderContent = () => {
     switch (section.type) {
       case 'details':
-        return <DetailsSection content={section.content as Detail[]} />;
+        return <DetailsSection content={section.content} />;
       case 'items':
-        return <ItemsSection content={section.content as Item[]} />;
+        return <ItemsSection content={section.content} />;
       case 'changes':
-        return <ChangesSection content={section.content as Change[]} />;
+        return <ChangesSection content={section.content} />;
       case 'preview':
-        return <PreviewSection content={section.content as string} />;
+        return <PreviewSection content={section.content} />;
       case 'summary':
-        return <SummarySection content={section.content as Detail[]} />;
-      default:
-        return null;
+        return <SummarySection content={section.content} />;
     }
   };
 
@@ -500,7 +525,12 @@ export function ReviewResource() {
           <div className="flex flex-col items-center gap-1">
             <div
               className="flex items-center justify-center gap-2"
-              style={{ color: decision === 'accepted' ? '#16a34a' : '#dc2626' }}
+              style={{
+                color:
+                  decision === 'accepted'
+                    ? 'light-dark(#16a34a, #4ade80)'
+                    : 'light-dark(#dc2626, #f87171)',
+              }}
             >
               <span className="text-lg">{decision === 'accepted' ? '\u2713' : '\u2717'}</span>
               <span className="font-medium">

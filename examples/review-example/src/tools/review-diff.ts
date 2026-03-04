@@ -19,6 +19,8 @@ export const schema = {
   runMigrations: z.boolean().describe('Whether to run database migrations as part of the change'),
 };
 
-export default async function (_args: Record<string, unknown>, _extra: ToolHandlerExtra) {
+type Args = z.infer<z.ZodObject<typeof schema>>;
+
+export default async function (_args: Args, _extra: ToolHandlerExtra) {
   return { structuredContent: { title: 'Review', sections: [] } };
 }

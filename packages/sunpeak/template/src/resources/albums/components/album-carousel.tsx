@@ -1,9 +1,9 @@
 import * as React from 'react';
 import useEmblaCarousel from 'embla-carousel-react';
 import { WheelGesturesPlugin } from 'embla-carousel-wheel-gestures';
-import { ArrowLeft, ArrowRight } from '../../../components/icon';
-import { Button } from '../../../components/button';
-import { cn } from '../../../lib/index';
+import { ArrowLeft, ArrowRight } from '@/components/icon';
+import { Button } from '@/components/button';
+import { cn } from '@/lib/index';
 
 export type AlbumCarouselProps = {
   children?: React.ReactNode;

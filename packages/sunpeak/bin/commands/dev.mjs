@@ -201,6 +201,7 @@ export async function dev(projectRoot = process.cwd(), args = []) {
     plugins: [react(), tailwindcss(), sunpeakFaviconPlugin()],
     resolve: {
       alias: {
+        '@': path.resolve(projectRoot, 'src'),
         // In workspace dev mode, use local sunpeak source
         ...(isTemplate && {
           sunpeak: parentSrc,
@@ -354,6 +355,7 @@ if (import.meta.hot) {
       plugins: [react(), tailwindcss(), sunpeakEntryPlugin()],
       resolve: {
         alias: {
+          '@': path.resolve(projectRoot, 'src'),
           ...(isTemplate && {
             sunpeak: parentSrc,
           }),

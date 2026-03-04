@@ -14,6 +14,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
+      '@': path.resolve(__dirname, 'src'),
       // In workspace dev mode, use local sunpeak source
       ...(isTemplate && {
         sunpeak: parentSrc,

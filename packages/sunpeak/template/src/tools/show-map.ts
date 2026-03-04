@@ -24,6 +24,8 @@ export const schema = {
   priceRange: z.array(z.enum(['$', '$$', '$$$', '$$$$'])).describe('Price range filter'),
 };
 
-export default async function (_args: Record<string, unknown>, _extra: ToolHandlerExtra) {
+type Args = z.infer<z.ZodObject<typeof schema>>;
+
+export default async function (_args: Args, _extra: ToolHandlerExtra) {
   return { structuredContent: { places: [] } };
 }

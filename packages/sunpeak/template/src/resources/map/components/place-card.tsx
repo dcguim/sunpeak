@@ -1,6 +1,6 @@
 import * as React from 'react';
-import { Star } from '../../../components/icon';
-import { cn } from '../../../lib/index';
+import { Star } from '@/components/icon';
+import { cn } from '@/lib/index';
 import type { Place } from './types';
 
 export type PlaceCardProps = {

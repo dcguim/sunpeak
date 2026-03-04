@@ -1,8 +1,8 @@
 import * as React from 'react';
 import { useApp, useAppState, useDisplayMode, useToolData, useViewport } from 'sunpeak';
-import { Button } from '../../../components/button';
-import { ExpandLg } from '../../../components/icon';
-import { cn } from '../../../lib/index';
+import { Button } from '@/components/button';
+import { ExpandLg } from '@/components/icon';
+import { cn } from '@/lib/index';
 import { PlaceList } from './place-list';
 import { PlaceCarousel } from './place-carousel';
 import { PlaceInspector } from './place-inspector';

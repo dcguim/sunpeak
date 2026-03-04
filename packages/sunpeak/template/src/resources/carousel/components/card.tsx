@@ -1,6 +1,6 @@
 import * as React from 'react';
-import { Button } from '../../../components/button';
-import { cn } from '../../../lib/index';
+import { Button } from '@/components/button';
+import { cn } from '@/lib/index';
 
 export interface CardButtonProps {
   isPrimary?: boolean;

@@ -21,6 +21,8 @@ export const schema = {
   visibility: z.enum(['public', 'connections', 'private']).describe('Post visibility setting'),
 };
 
-export default async function (_args: Record<string, unknown>, _extra: ToolHandlerExtra) {
+type Args = z.infer<z.ZodObject<typeof schema>>;
+
+export default async function (_args: Args, _extra: ToolHandlerExtra) {
   return { structuredContent: { title: 'Review Your Post', sections: [] } };
 }

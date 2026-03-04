@@ -43,7 +43,9 @@ export const schema = {
 };
 
 // 3. Handler
-export default async function (args: Record<string, unknown>, extra: ToolHandlerExtra) {
+type Args = z.infer<z.ZodObject<typeof schema>>;
+
+export default async function (args: Args, extra: ToolHandlerExtra) {
   return { structuredContent: { albums: [] } };
 }
 ```
@@ -108,8 +110,10 @@ export const schema = {
 The default export is the tool handler function. It receives the validated input arguments and a `ToolHandlerExtra` object.
 
 ```ts
-export default async function (args: Record<string, unknown>, extra: ToolHandlerExtra) {
-  // args contains the validated input
+type Args = z.infer<z.ZodObject<typeof schema>>;
+
+export default async function (args: Args, extra: ToolHandlerExtra) {
+  // args is typed from your schema
   // extra has authInfo, sessionId, signal
   return { structuredContent: { data: [] } };
 }

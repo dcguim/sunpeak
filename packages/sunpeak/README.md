@@ -141,7 +141,9 @@ export const schema = {
   title: z.string().describe('Title describing the changes'),
 };
 
-export default async function (args: Record<string, unknown>, extra: ToolHandlerExtra) {
+type Args = z.infer<z.ZodObject<typeof schema>>;
+
+export default async function (args: Args, extra: ToolHandlerExtra) {
   return { structuredContent: { title: args.title, sections: [] } };
 }
 ```

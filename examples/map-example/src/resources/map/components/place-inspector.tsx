@@ -1,8 +1,8 @@
 import * as React from 'react';
-import { Button } from '../../../components/button';
-import { Avatar } from '../../../components/avatar';
-import { X, Star } from '../../../components/icon';
-import { cn } from '../../../lib/index';
+import { Button } from '@/components/button';
+import { Avatar } from '@/components/avatar';
+import { X, Star } from '@/components/icon';
+import { cn } from '@/lib/index';
 import type { Place } from './types';
 
 export type PlaceInspectorProps = {
