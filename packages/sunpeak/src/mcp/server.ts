@@ -8,11 +8,8 @@ import { FAVICON_BASE64, FAVICON_BUFFER } from './favicon.js';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { randomUUID } from 'node:crypto';
-import {
-  registerAppTool,
-  registerAppResource,
-  RESOURCE_MIME_TYPE,
-} from '@modelcontextprotocol/ext-apps/server';
+import { registerAppTool, RESOURCE_MIME_TYPE } from '@modelcontextprotocol/ext-apps/server';
+import type { RegisteredResource, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
 
 import { type MCPServerConfig, type MCPServerHandle, type SimulationWithDist } from './types.js';
 
@@ -158,11 +155,21 @@ function injectViteCSP(existingMeta: Record<string, unknown> | undefined): Recor
   };
 }
 
+type AppServerResult = {
+  server: McpServer;
+  resourceHandles: Map<string, RegisteredResource>;
+  toolHandles: {
+    handle: RegisteredTool;
+    resourceName: string;
+    toolMeta: Record<string, unknown>;
+  }[];
+};
+
 function createAppServer(
   config: MCPServerConfig,
   simulations: SimulationWithDist[],
   viteMode: boolean
-): McpServer {
+): AppServerResult {
   const { name = 'sunpeak-app', version = '0.1.0' } = config;
 
   const mcpServer = new McpServer(
@@ -182,36 +189,42 @@ function createAppServer(
 
   // Track registered resource URIs to avoid duplicate registration
   // (multiple simulations can share the same resource, e.g. review-diff and review-post)
-  const registeredResources = new Set<string>();
+  const registeredUriSet = new Set<string>();
+  const resourceHandles = new Map<string, RegisteredResource>();
+  const toolHandles: AppServerResult['toolHandles'] = [];
 
-  // Register each simulation's tool and resource using ext-apps helpers
+  // Register each simulation's tool and resource
   for (const simulation of simulations) {
     const resource = simulation.resource;
     const tool = simulation.tool;
     const toolResult = simulation.toolResult ?? { structuredContent: null };
 
     // Use the resource's URI, or derive a stable one from the resource name.
-    // Must be stable across all SSE sessions — ChatGPT reads resource URIs from the tools/list
+    // Must be stable across all sessions — ChatGPT reads resource URIs from the tools/list
     // response in one session, then fetches the content in a separate resources/read session.
     const uri = (resource.uri as string) ?? `ui://${resource.name as string}`;
+    const resourceName = resource.name as string;
     const resourceMeta = (resource._meta as Record<string, unknown>) ?? {};
     const toolMeta = (tool._meta as Record<string, unknown>) ?? {};
 
-    // Register the resource using ext-apps helper (only once per URI)
-    // This sets RESOURCE_MIME_TYPE automatically
-    if (!registeredResources.has(uri)) {
-      registeredResources.add(uri);
+    // Register the resource directly via SDK (not ext-apps wrapper) to capture the
+    // RegisteredResource handle for URI updates on rebuild (cache-busting).
+    if (!registeredUriSet.has(uri)) {
+      registeredUriSet.add(uri);
       const listMeta = viteMode ? injectViteCSP(resourceMeta) : resourceMeta;
       console.log(`[MCP] RegisterResource: ${uri}`);
-      registerAppResource(
-        mcpServer,
-        resource.name as string,
+      const handle = mcpServer.registerResource(
+        resourceName,
         uri,
         {
+          mimeType: RESOURCE_MIME_TYPE,
           description: resource.description as string | undefined,
           _meta: listMeta,
         },
-        async (_uri, extra) => {
+        async (
+          readUri: URL,
+          extra: { requestInfo?: { headers?: Record<string, string | string[] | undefined> } }
+        ) => {
           // Claude's sandbox blocks HTTP script sources, so serve pre-built HTML.
           // ChatGPT can reach localhost, so it gets Vite HMR.
           const prodBuild = needsProdBuild(
@@ -223,18 +236,19 @@ function createAppServer(
           try {
             content = getResourceHtml(simulation, viteMode, prodBuild);
           } catch (error) {
-            console.error(`[MCP] ReadResource error for ${uri}:`, error);
+            console.error(`[MCP] ReadResource error for ${readUri.href}:`, error);
             throw error;
           }
           const sizeKB = (content.length / 1024).toFixed(1);
           console.log(
-            `[MCP] ReadResource: ${uri} → ${sizeKB}KB${prodBuild ? ' (prod build)' : ' (vite)'}`
+            `[MCP] ReadResource: ${readUri.href} → ${sizeKB}KB${prodBuild ? ' (prod build)' : ' (vite)'}`
           );
 
           return {
             contents: [
               {
-                uri,
+                // Use readUri (not closure variable) so the response URI matches after updates
+                uri: readUri.href,
                 mimeType: RESOURCE_MIME_TYPE,
                 text: content,
                 _meta: readMeta,
@@ -243,27 +257,29 @@ function createAppServer(
           };
         }
       );
+      resourceHandles.set(resourceName, handle);
     }
 
-    // Register the tool using ext-apps helper
-    // This normalizes the ui/resourceUri metadata automatically
+    // Register the tool using ext-apps helper (normalizes ui/resourceUri metadata).
+    // Capture the returned RegisteredTool handle for metadata updates on rebuild.
     // Note: inputSchema from simulation is JSON Schema, not Zod, so we omit it here
     // (simulation mode doesn't validate inputs - just logs what was called)
-    registerAppTool(
+    const fullToolMeta = {
+      ...toolMeta,
+      ui: {
+        resourceUri: uri,
+        // Preserve tool visibility from simulation metadata if declared
+        ...((toolMeta.ui as Record<string, unknown>)?.visibility
+          ? { visibility: (toolMeta.ui as Record<string, unknown>).visibility }
+          : {}),
+      },
+    };
+    const toolHandle = registerAppTool(
       mcpServer,
       tool.name as string,
       {
         description: tool.description as string | undefined,
-        _meta: {
-          ...toolMeta,
-          ui: {
-            resourceUri: uri,
-            // Preserve tool visibility from simulation metadata if declared
-            ...((toolMeta.ui as Record<string, unknown>)?.visibility
-              ? { visibility: (toolMeta.ui as Record<string, unknown>).visibility }
-              : {}),
-          },
-        },
+        _meta: fullToolMeta,
       },
       async (extra) => {
         // Access arguments from request context (no inputSchema = no parsed args)
@@ -290,14 +306,15 @@ function createAppServer(
         };
       }
     );
+    toolHandles.push({ handle: toolHandle, resourceName, toolMeta: fullToolMeta });
   }
 
-  const registeredUris = Array.from(registeredResources).join(', ');
+  const registeredUris = Array.from(registeredUriSet).join(', ');
   console.log(
     `[MCP] Registered ${simulations.length} tool(s) and resource(s)${viteMode ? ' (vite mode)' : ''}: ${registeredUris}`
   );
 
-  return mcpServer;
+  return { server: mcpServer, resourceHandles, toolHandles };
 }
 
 type SessionRecord = {
@@ -306,6 +323,10 @@ type SessionRecord = {
   /** True for localhost connections (ChatGPT, simulator) — they use Vite HMR. */
   isLocal: boolean;
   lastActivity: number;
+  /** Resource handles for URI cache-busting on rebuild. Keyed by resource name. */
+  resourceHandles: Map<string, RegisteredResource>;
+  /** Tool handles for metadata cache-busting on rebuild. */
+  toolHandles: AppServerResult['toolHandles'];
 };
 
 /** How long an idle session lives before being cleaned up (5 minutes). */
@@ -313,8 +334,7 @@ const SESSION_IDLE_TIMEOUT_MS = 5 * 60 * 1000;
 
 /**
  * Check if the request originates from localhost.
- * Local connections (ChatGPT, simulator) use Vite HMR and don't need
- * cache invalidation. Tunnel connections (Claude, other hosts) need it.
+ * Local connections (ChatGPT, simulator) use Vite HMR for live content updates.
  */
 function isLocalConnection(req: IncomingMessage): boolean {
   const addr = req.socket.remoteAddress;
@@ -403,11 +423,18 @@ async function handleMcpRequest(
   // New session (POST without session ID = initialization)
   if (req.method === 'POST') {
     const isLocal = isLocalConnection(req);
-    const server = createAppServer(config, simulations, viteMode);
+    const { server, resourceHandles, toolHandles } = createAppServer(config, simulations, viteMode);
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: () => randomUUID(),
       onsessioninitialized: (id) => {
-        sessions.set(id, { server, transport, isLocal, lastActivity: Date.now() });
+        sessions.set(id, {
+          server,
+          transport,
+          isLocal,
+          lastActivity: Date.now(),
+          resourceHandles,
+          toolHandles,
+        });
         const origin = isLocal ? 'local' : 'tunnel';
         console.log(
           `[MCP] Session started: ${id.substring(0, 8)}... (${origin}, ${sessions.size} active)`
@@ -577,16 +604,29 @@ export function runMCPServer(config: MCPServerConfig): MCPServerHandle {
 
   return {
     invalidateResources() {
-      let notified = 0;
+      if (sessions.size === 0) return;
+
+      const timestamp = Date.now();
       for (const [, session] of sessions) {
-        if (!session.isLocal) {
-          session.server.sendResourceListChanged();
-          notified++;
+        // Update resource URIs with timestamp to force cache-busting.
+        // .update() automatically sends resources/list_changed notification.
+        for (const [name, handle] of session.resourceHandles) {
+          handle.update({ uri: `ui://${name}-${timestamp}` });
+        }
+        // Update tool metadata to reference the new resource URIs.
+        // .update() automatically sends tools/list_changed notification.
+        for (const { handle, resourceName, toolMeta } of session.toolHandles) {
+          const newUri = `ui://${resourceName}-${timestamp}`;
+          handle.update({
+            _meta: {
+              ...toolMeta,
+              ui: { ...(toolMeta.ui as Record<string, unknown>), resourceUri: newUri },
+              'ui/resourceUri': newUri,
+            },
+          });
         }
       }
-      if (notified > 0) {
-        console.log(`[MCP] Notified ${notified} session(s) of resource changes`);
-      }
+      console.log(`[MCP] Cache-busted ${sessions.size} session(s) with timestamp ${timestamp}`);
     },
   };
 }
