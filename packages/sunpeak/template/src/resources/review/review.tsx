@@ -126,42 +126,154 @@ interface ReviewState {
 // Section Renderers
 // ============================================================================
 
+const changeIcons = {
+  create: (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="3"
+      strokeLinecap="round"
+    >
+      <line x1="12" y1="5" x2="12" y2="19" />
+      <line x1="5" y1="12" x2="19" y2="12" />
+    </svg>
+  ),
+  modify: (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="3"
+      strokeLinecap="round"
+    >
+      <path d="M4 15c2-3 5-5 8-2s6 1 8-2" />
+    </svg>
+  ),
+  delete: (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="3"
+      strokeLinecap="round"
+    >
+      <line x1="5" y1="12" x2="19" y2="12" />
+    </svg>
+  ),
+  action: (
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <line x1="5" y1="12" x2="19" y2="12" />
+      <polyline points="12 5 19 12 12 19" />
+    </svg>
+  ),
+};
+
 const changeTypeConfig = {
-  create: { icon: '+', color: 'light-dark(#16a34a, #4ade80)', bg: 'light-dark(#f0fdf4, #052e16)' },
-  modify: { icon: '~', color: 'light-dark(#ca8a04, #facc15)', bg: 'light-dark(#fefce8, #422006)' },
-  delete: {
-    icon: '\u2212',
-    color: 'light-dark(#dc2626, #f87171)',
-    bg: 'light-dark(#fef2f2, #450a0a)',
-  },
-  action: {
-    icon: '\u2192',
-    color: 'light-dark(#2563eb, #60a5fa)',
-    bg: 'light-dark(#eff6ff, #172554)',
-  },
+  create: { color: 'light-dark(#16a34a, #4ade80)', bg: 'light-dark(#f0fdf4, #052e16)' },
+  modify: { color: 'light-dark(#ca8a04, #facc15)', bg: 'light-dark(#fefce8, #422006)' },
+  delete: { color: 'light-dark(#dc2626, #f87171)', bg: 'light-dark(#fef2f2, #450a0a)' },
+  action: { color: 'light-dark(#2563eb, #60a5fa)', bg: 'light-dark(#eff6ff, #172554)' },
+};
+
+const alertIcons = {
+  info: (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="12" cy="12" r="10" />
+      <line x1="12" y1="16" x2="12" y2="12" />
+      <line x1="12" y1="8" x2="12.01" y2="8" />
+    </svg>
+  ),
+  warning: (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+      <line x1="12" y1="9" x2="12" y2="13" />
+      <line x1="12" y1="17" x2="12.01" y2="17" />
+    </svg>
+  ),
+  error: (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="12" cy="12" r="10" />
+      <line x1="15" y1="9" x2="9" y2="15" />
+      <line x1="9" y1="9" x2="15" y2="15" />
+    </svg>
+  ),
+  success: (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="12" cy="12" r="10" />
+      <polyline points="9 12 12 15 16 10" />
+    </svg>
+  ),
 };
 
 const alertTypeConfig = {
   info: {
-    icon: '\u2139',
     bg: 'light-dark(#eff6ff, #172554)',
     border: 'light-dark(#bfdbfe, #1e3a5f)',
     text: 'light-dark(#1e40af, #93c5fd)',
   },
   warning: {
-    icon: '\u26A0',
     bg: 'light-dark(#fefce8, #422006)',
     border: 'light-dark(#fde047, #854d0e)',
     text: 'light-dark(#a16207, #fde047)',
   },
   error: {
-    icon: '\u2715',
     bg: 'light-dark(#fef2f2, #450a0a)',
     border: 'light-dark(#fecaca, #7f1d1d)',
     text: 'light-dark(#b91c1c, #fca5a5)',
   },
   success: {
-    icon: '\u2713',
     bg: 'light-dark(#f0fdf4, #052e16)',
     border: 'light-dark(#bbf7d0, #14532d)',
     text: 'light-dark(#15803d, #86efac)',
@@ -263,7 +375,7 @@ function ChangesSection({ content }: { content: Change[] }) {
                   borderColor: config.color,
                 }}
               >
-                {config.icon}
+                {changeIcons[change.type]}
               </span>
               <div className="flex-1 min-w-0">
                 {change.path && (
@@ -362,8 +474,8 @@ function AlertBanner({ alert }: { alert: Alert }) {
         borderColor: config.border,
       }}
     >
-      <span className="flex-shrink-0 text-base leading-none" style={{ color: config.text }}>
-        {config.icon}
+      <span className="flex-shrink-0" style={{ color: config.text }}>
+        {alertIcons[alert.type]}
       </span>
       <span className="text-sm" style={{ color: config.text }}>
         {alert.message}
