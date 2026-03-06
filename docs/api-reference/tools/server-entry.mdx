@@ -4,6 +4,8 @@ description: "Optional auth and server configuration."
 keywords: ["MCP Apps", "ChatGPT Apps", "MCP server", "authentication", "server config"]
 ---
 
+<Badge color="yellow">sunpeak API</Badge>
+
 ## Overview
 
 The optional `src/server.ts` file configures authentication and server metadata. When present, the framework calls `auth()` on every MCP request and populates `extra.authInfo` in tool handlers.

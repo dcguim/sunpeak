@@ -4,6 +4,8 @@ description: "Access the App instance from context."
 keywords: ["MCP Apps", "ChatGPT Apps", "React hooks", "useApp", "AppProvider"]
 ---
 
+<Badge color="yellow">sunpeak API</Badge>
+
 ## Overview
 
 The `useApp` hook returns the `App` instance from the nearest `AppProvider`. Use this when you need direct access to the `App` for SDK method calls like `app.requestDisplayMode()`. Most hooks read from context internally, so you typically only need `useApp()` for direct SDK calls.
