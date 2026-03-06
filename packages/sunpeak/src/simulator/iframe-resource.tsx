@@ -232,14 +232,30 @@ function injectPaintFence(iframe: HTMLIFrameElement): void {
  * For src-mode iframes (Vite dev) the simulator doesn't control the HTML,
  * so we inject the rule after load. The scriptSrc-mode generated HTML
  * already includes this rule in its <style> tag.
+ *
+ * Sets color-scheme on the document so the CSS system color `Canvas`
+ * resolves to the correct dark/light default, preventing white flash.
  */
-function injectBackgroundRule(iframe: HTMLIFrameElement): void {
+function injectBackgroundRule(
+  iframe: HTMLIFrameElement,
+  theme?: string,
+  styleVars?: Record<string, string>
+): void {
   try {
     const doc = iframe.contentDocument;
     if (!doc || doc.querySelector('style[data-sunpeak-bg]')) return;
+    // Set color-scheme so Canvas resolves to the correct system color
+    doc.documentElement.style.colorScheme = theme || 'dark';
+    // Inject host style variables so --color-background-primary resolves
+    // immediately, before the MCP handshake delivers them via the SDK.
+    if (styleVars) {
+      for (const [key, value] of Object.entries(styleVars)) {
+        if (value) doc.documentElement.style.setProperty(key, value);
+      }
+    }
     const style = doc.createElement('style');
     style.setAttribute('data-sunpeak-bg', '');
-    style.textContent = 'html { background-color: var(--color-background-primary, transparent); }';
+    style.textContent = 'html { background-color: var(--color-background-primary, Canvas); }';
     doc.head.appendChild(style);
   } catch {
     // Cross-origin iframe — contentDocument access blocked
@@ -263,23 +279,18 @@ function generateScriptHtml(
   // script so that isChatGPT() and platform hooks work from first render.
   const platformTag = platformScript ? `\n  <script>${platformScript}</script>` : '';
   return `<!DOCTYPE html>
-<html lang="en" data-theme="${safeTheme}">
+<html lang="en" data-theme="${safeTheme}" style="color-scheme:${safeTheme};background:Canvas">
 <head>
   <meta charset="UTF-8" />
+  <meta name="color-scheme" content="${safeTheme}" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta http-equiv="Content-Security-Policy" content="${safeCsp}" />
   <title>Resource</title>
   <style>
     html {
-      /* Set color-scheme before the resource script loads so system UI (scrollbars,
-         form elements) is themed correctly from first paint. Once the script loads,
-         applyDocumentTheme() takes over with an inline style. */
-      color-scheme: ${safeTheme};
-    }
-    html {
       /* Use the MCP App background variable once JS sets it, otherwise
-         transparent so the host's own background shows through. */
-      background-color: var(--color-background-primary, transparent);
+         Canvas (the system color that auto-adapts to color-scheme). */
+      background-color: var(--color-background-primary, Canvas);
     }
     body, #root {
       margin: 0;
@@ -413,14 +424,6 @@ export function IframeResource({
   // Determine which URL to validate
   const resourceUrl = src ?? scriptSrc;
 
-  // Reset loaded state synchronously when resource changes so there's no
-  // render frame where the new (white) iframe is shown at full opacity.
-  const prevResourceUrl = useRef(resourceUrl);
-  if (prevResourceUrl.current !== resourceUrl) {
-    prevResourceUrl.current = resourceUrl;
-    if (loaded) setLoaded(false);
-  }
-
   // Track whether we've received an initial size report
   const hasReceivedSizeRef = useRef(false);
 
@@ -482,7 +485,11 @@ export function IframeResource({
   const handleLoad = useCallback(() => {
     if (src && iframeRef.current) {
       injectPaintFence(iframeRef.current);
-      injectBackgroundRule(iframeRef.current);
+      injectBackgroundRule(
+        iframeRef.current,
+        hostContext?.theme,
+        hostContext?.styles?.variables as Record<string, string> | undefined
+      );
     }
     // Inject mock ChatGPT runtime for src-mode iframes after page load.
     // For srcdoc mode this is handled by an inline script in the generated HTML.
@@ -495,7 +502,7 @@ export function IframeResource({
       }
     }
     setLoaded(true);
-  }, [src, injectOpenAIRuntime]);
+  }, [src, injectOpenAIRuntime, hostContext?.theme, hostContext?.styles]);
 
   // Update host context when props change.
   // McpAppHost.setHostContext() internally detects display mode changes
@@ -584,6 +591,19 @@ export function IframeResource({
     return generateScriptHtml(absoluteScriptSrc, theme, cspPolicy, platformScript);
   }, [scriptSrc, isValidUrl, csp, hostContext?.theme, injectOpenAIRuntime]);
 
+  const iframeStyle: React.CSSProperties = {
+    ...borderStyle,
+    background: 'transparent',
+    colorScheme: hostContext?.theme === 'light' ? 'light dark' : 'dark light',
+    opacity: loaded ? 1 : 0,
+    transition: loaded ? 'opacity 100ms' : 'none',
+    width: '100%',
+    // Start with minHeight to prevent collapse, but allow auto-resize to set actual height.
+    // Don't use height: 100% as it requires explicit height in parent chain.
+    minHeight: '200px',
+    ...style,
+  };
+
   // For src mode, use iframe src directly
   if (src) {
     if (!isValidUrl) {
@@ -597,18 +617,7 @@ export function IframeResource({
         src={src}
         onLoad={handleLoad}
         className={className}
-        style={{
-          ...borderStyle,
-          background: 'transparent',
-          colorScheme: hostContext?.theme === 'light' ? 'light dark' : 'dark light',
-          opacity: loaded ? 1 : 0,
-          transition: loaded ? 'opacity 100ms' : 'none',
-          width: '100%',
-          // Start with minHeight to prevent collapse, but allow auto-resize to set actual height.
-          // Don't use height: 100% as it requires explicit height in parent chain.
-          minHeight: '200px',
-          ...style,
-        }}
+        style={iframeStyle}
         title="Resource Preview"
         sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
         allow={allowAttribute}
@@ -622,18 +631,7 @@ export function IframeResource({
       srcDoc={htmlContent}
       onLoad={handleLoad}
       className={className}
-      style={{
-        ...borderStyle,
-        background: 'transparent',
-        colorScheme: hostContext?.theme === 'light' ? 'light dark' : 'dark light',
-        opacity: loaded ? 1 : 0,
-        transition: loaded ? 'opacity 100ms' : 'none',
-        width: '100%',
-        // Start with minHeight to prevent collapse, but allow auto-resize to set actual height.
-        // Don't use height: 100% as it requires explicit height in parent chain.
-        minHeight: '200px',
-        ...style,
-      }}
+      style={iframeStyle}
       title="Resource Preview"
       sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
       allow={allowAttribute}

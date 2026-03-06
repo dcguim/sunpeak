@@ -132,7 +132,10 @@ describe('IframeResource', () => {
     const iframe = screen.getByTitle('Resource Preview') as HTMLIFrameElement;
     const srcDoc = iframe.getAttribute('srcDoc') ?? '';
 
-    expect(srcDoc).toContain('color-scheme: dark');
+    // color-scheme is set as an inline style on <html> (processed during parsing,
+    // before stylesheets) and as a <meta> tag, to prevent white canvas flash.
+    expect(srcDoc).toContain('style="color-scheme:dark;background:Canvas"');
+    expect(srcDoc).toContain('<meta name="color-scheme" content="dark" />');
   });
 });
 

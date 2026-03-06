@@ -99,52 +99,61 @@ export function Simulator({
     }
   }, [activeShell]);
 
-  // Build content
+  // Build content.
+  // The wrapper div stays mounted across key changes, providing a themed
+  // background while the iframe (opacity: 0) loads new content.
   let content: React.ReactNode;
+  const iframeBg = 'var(--sim-bg-conversation, var(--color-background-primary, transparent))';
   if (state.resourceUrl) {
     content = (
-      <IframeResource
-        src={state.resourceUrl}
-        hostContext={hostContext}
-        toolInput={state.toolInput}
-        toolInputPartial={state.toolInputPartial}
-        toolResult={state.effectiveToolResult}
-        hostOptions={{
-          hostInfo: activeShell?.hostInfo,
-          hostCapabilities: activeShell?.hostCapabilities,
-          onDisplayModeChange: state.handleDisplayModeChange,
-          onUpdateModelContext: state.handleUpdateModelContext,
-        }}
-        permissions={state.permissions}
-        prefersBorder={state.prefersBorder}
-        onDisplayModeReady={state.handleDisplayModeReady}
-        debugInjectState={state.modelContext}
-        injectOpenAIRuntime={state.activeHost === 'chatgpt'}
-        className="h-full w-full"
-      />
+      <div className="h-full w-full" style={{ background: iframeBg }}>
+        <IframeResource
+          key={`${state.activeHost}-${state.selectedSimulationName}`}
+          src={state.resourceUrl}
+          hostContext={hostContext}
+          toolInput={state.toolInput}
+          toolInputPartial={state.toolInputPartial}
+          toolResult={state.effectiveToolResult}
+          hostOptions={{
+            hostInfo: activeShell?.hostInfo,
+            hostCapabilities: activeShell?.hostCapabilities,
+            onDisplayModeChange: state.handleDisplayModeChange,
+            onUpdateModelContext: state.handleUpdateModelContext,
+          }}
+          permissions={state.permissions}
+          prefersBorder={state.prefersBorder}
+          onDisplayModeReady={state.handleDisplayModeReady}
+          debugInjectState={state.modelContext}
+          injectOpenAIRuntime={state.activeHost === 'chatgpt'}
+          className="h-full w-full"
+        />
+      </div>
     );
   } else if (state.resourceScript) {
     content = (
-      <IframeResource
-        scriptSrc={state.resourceScript}
-        hostContext={hostContext}
-        toolInput={state.toolInput}
-        toolInputPartial={state.toolInputPartial}
-        toolResult={state.effectiveToolResult}
-        csp={state.csp}
-        hostOptions={{
-          hostInfo: activeShell?.hostInfo,
-          hostCapabilities: activeShell?.hostCapabilities,
-          onDisplayModeChange: state.handleDisplayModeChange,
-          onUpdateModelContext: state.handleUpdateModelContext,
-        }}
-        permissions={state.permissions}
-        prefersBorder={state.prefersBorder}
-        onDisplayModeReady={state.handleDisplayModeReady}
-        debugInjectState={state.modelContext}
-        injectOpenAIRuntime={state.activeHost === 'chatgpt'}
-        className="h-full w-full"
-      />
+      <div className="h-full w-full" style={{ background: iframeBg }}>
+        <IframeResource
+          key={`${state.activeHost}-${state.selectedSimulationName}`}
+          scriptSrc={state.resourceScript}
+          hostContext={hostContext}
+          toolInput={state.toolInput}
+          toolInputPartial={state.toolInputPartial}
+          toolResult={state.effectiveToolResult}
+          csp={state.csp}
+          hostOptions={{
+            hostInfo: activeShell?.hostInfo,
+            hostCapabilities: activeShell?.hostCapabilities,
+            onDisplayModeChange: state.handleDisplayModeChange,
+            onUpdateModelContext: state.handleUpdateModelContext,
+          }}
+          permissions={state.permissions}
+          prefersBorder={state.prefersBorder}
+          onDisplayModeReady={state.handleDisplayModeReady}
+          debugInjectState={state.modelContext}
+          injectOpenAIRuntime={state.activeHost === 'chatgpt'}
+          className="h-full w-full"
+        />
+      </div>
     );
   } else {
     content = children;
@@ -472,7 +481,6 @@ export function Simulator({
             appIcon={appIcon}
             userMessage={state.selectedSim?.userMessage}
             isTransitioning={state.isTransitioning}
-            key={`${state.activeHost}-${state.selectedSimulationName}`}
           >
             {content}
           </ShellConversation>

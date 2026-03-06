@@ -325,41 +325,50 @@ export function ChatGPTSimulator({
   // For non-iframe content (children), there's no async rendering so no transition.
   const isTransitioning = hasIframeContent && displayMode !== readyDisplayMode;
 
+  // The wrapper div stays mounted across key changes, providing a themed
+  // background while the iframe (opacity: 0) loads new content.
+  const iframeBg = 'var(--sim-bg-conversation, var(--color-background-primary, transparent))';
   let content: React.ReactNode;
   if (resourceUrl) {
     // Dev mode: load HTML page directly (supports Vite HMR)
     content = (
-      <IframeResource
-        src={resourceUrl}
-        hostContext={hostContext}
-        toolInput={toolInput}
-        toolResult={effectiveToolResult}
-        hostOptions={{
-          onDisplayModeChange: handleDisplayModeChange,
-          onUpdateModelContext: handleUpdateModelContext,
-        }}
-        onDisplayModeReady={handleDisplayModeReady}
-        debugInjectState={modelContext}
-        className="h-full w-full"
-      />
+      <div className="h-full w-full" style={{ background: iframeBg }}>
+        <IframeResource
+          key={selectedSimulationName}
+          src={resourceUrl}
+          hostContext={hostContext}
+          toolInput={toolInput}
+          toolResult={effectiveToolResult}
+          hostOptions={{
+            onDisplayModeChange: handleDisplayModeChange,
+            onUpdateModelContext: handleUpdateModelContext,
+          }}
+          onDisplayModeReady={handleDisplayModeReady}
+          debugInjectState={modelContext}
+          className="h-full w-full"
+        />
+      </div>
     );
   } else if (resourceScript) {
     // Production mode: generate HTML wrapper for script
     content = (
-      <IframeResource
-        scriptSrc={resourceScript}
-        hostContext={hostContext}
-        toolInput={toolInput}
-        toolResult={effectiveToolResult}
-        csp={csp}
-        hostOptions={{
-          onDisplayModeChange: handleDisplayModeChange,
-          onUpdateModelContext: handleUpdateModelContext,
-        }}
-        onDisplayModeReady={handleDisplayModeReady}
-        debugInjectState={modelContext}
-        className="h-full w-full"
-      />
+      <div className="h-full w-full" style={{ background: iframeBg }}>
+        <IframeResource
+          key={selectedSimulationName}
+          scriptSrc={resourceScript}
+          hostContext={hostContext}
+          toolInput={toolInput}
+          toolResult={effectiveToolResult}
+          csp={csp}
+          hostOptions={{
+            onDisplayModeChange: handleDisplayModeChange,
+            onUpdateModelContext: handleUpdateModelContext,
+          }}
+          onDisplayModeReady={handleDisplayModeReady}
+          debugInjectState={modelContext}
+          className="h-full w-full"
+        />
+      </div>
     );
   } else {
     content = children;
@@ -623,7 +632,6 @@ export function ChatGPTSimulator({
           appIcon={appIcon}
           userMessage={selectedSim?.userMessage}
           isTransitioning={isTransitioning}
-          key={selectedSimulationName}
         >
           {content}
         </Conversation>
