@@ -7,6 +7,9 @@ export type { OpenAIFileDownloadUrlResult as FileDownloadUrlResult };
 /**
  * Get a temporary download URL for a file by its ID.
  *
+ * @deprecated Use {@link useDownloadFile} from `sunpeak` instead — it works
+ * across all hosts via the MCP Apps SDK `app.downloadFile()` method.
+ *
  * Wraps `window.openai.getFileDownloadUrl` which is only available inside
  * ChatGPT. Use this to retrieve URLs for files uploaded via {@link useUploadFile}
  * or file IDs received in tool parameters.

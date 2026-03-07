@@ -34,16 +34,26 @@ export type { SafeAreaProps } from './safe-area';
 // === Action hooks (wrap App methods) ===
 export { useCallServerTool } from './use-call-server-tool';
 export type { CallServerToolParams, CallServerToolResult } from './use-call-server-tool';
-export { useSendMessage } from './use-send-message';
-export type { SendMessageParams, MessageContent } from './use-send-message';
-export { useUpdateModelContext } from './use-update-model-context';
-export type { UpdateModelContextParams } from './use-update-model-context';
+export { useDownloadFile } from './use-download-file';
+export type { DownloadFileParams, DownloadFileResult } from './use-download-file';
+export { useListServerResources } from './use-list-server-resources';
+export type {
+  ListServerResourcesParams,
+  ListServerResourcesResult,
+  ServerResource,
+} from './use-list-server-resources';
 export { useOpenLink } from './use-open-link';
 export type { OpenLinkParams } from './use-open-link';
+export { useReadServerResource } from './use-read-server-resource';
+export type { ReadServerResourceParams, ReadServerResourceResult } from './use-read-server-resource';
 export { useRequestDisplayMode } from './use-request-display-mode';
 export type { AppDisplayMode } from './use-request-display-mode';
 export { useSendLog } from './use-send-log';
 export type { LogLevel, SendLogParams } from './use-send-log';
+export { useSendMessage } from './use-send-message';
+export type { SendMessageParams, MessageContent } from './use-send-message';
+export { useUpdateModelContext } from './use-update-model-context';
+export type { UpdateModelContextParams } from './use-update-model-context';
 
 // === Host info hooks ===
 export { useHostInfo } from './use-host-info';

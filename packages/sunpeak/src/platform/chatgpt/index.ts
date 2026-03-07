@@ -2,8 +2,8 @@
  * ChatGPT-specific hooks wrapping `window.openai` runtime APIs.
  *
  * These provide typed React hooks for ChatGPT platform features that are
- * not part of the MCP Apps standard: file uploads, file download URLs,
- * host modals, and instant checkout.
+ * not part of the MCP Apps standard: file uploads, host modals, and
+ * instant checkout.
  *
  * Always feature-detect before use — these hooks throw if the underlying
  * `window.openai` method is not available (i.e. outside ChatGPT).
@@ -24,6 +24,7 @@ export type { OpenAIRuntime } from './openai-types';
 // === File actions ===
 export { useUploadFile } from './use-create-file';
 export type { CreateFileResult } from './use-create-file';
+/** @deprecated Use `useDownloadFile` from `sunpeak` instead. */
 export { useGetFileDownloadUrl } from './use-file-download';
 export type { FileDownloadUrlResult } from './use-file-download';
 

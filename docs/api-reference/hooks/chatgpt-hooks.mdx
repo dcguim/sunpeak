@@ -18,7 +18,7 @@ These hooks throw if called outside ChatGPT. Always feature-detect with [`isChat
 ## Import
 
 ```tsx
-import { useUploadFile, useGetFileDownloadUrl, useRequestModal, useRequestCheckout } from 'sunpeak/platform/chatgpt';
+import { useUploadFile, useRequestModal, useRequestCheckout } from 'sunpeak/platform/chatgpt';
 import { isChatGPT } from 'sunpeak/platform';
 ```
 
@@ -65,7 +65,7 @@ function useUploadFile(): (file: File) => Promise<CreateFileResult>
 ### CreateFileResult
 
 <ResponseField name="fileId" type="string" required>
-  The ID of the uploaded file. Use with `useGetFileDownloadUrl` to retrieve a download URL.
+  The ID of the uploaded file.
 </ResponseField>
 
 ### Supported Formats
@@ -88,48 +88,6 @@ function ImageUploader() {
   };
 
   return <input type="file" accept="image/*" onChange={handleChange} />;
-}
-```
-
----
-
-## useGetFileDownloadUrl
-
-Get a temporary download URL for a file by its ID.
-
-### Signature
-
-```tsx
-function useGetFileDownloadUrl(): (params: { fileId: string }) => Promise<FileDownloadUrlResult>
-```
-
-### Returns
-
-<ResponseField name="getFileDownloadUrl" type="(params: { fileId: string }) => Promise<FileDownloadUrlResult>">
-  Async function that retrieves a temporary download URL.
-</ResponseField>
-
-### FileDownloadUrlResult
-
-<ResponseField name="downloadUrl" type="string" required>
-  Temporary URL to download the file.
-</ResponseField>
-
-### Usage
-
-```tsx
-import { useGetFileDownloadUrl } from 'sunpeak/platform/chatgpt';
-import { useState, useEffect } from 'react';
-
-function FilePreview({ fileId }: { fileId: string }) {
-  const getFileDownloadUrl = useGetFileDownloadUrl();
-  const [src, setSrc] = useState<string>();
-
-  useEffect(() => {
-    getFileDownloadUrl({ fileId }).then(({ downloadUrl }) => setSrc(downloadUrl));
-  }, [fileId, getFileDownloadUrl]);
-
-  return src ? <img src={src} /> : <p>Loading...</p>;
 }
 ```
 

@@ -28,6 +28,7 @@ export {
   TOOL_RESULT_METHOD,
   TOOL_CANCELLED_METHOD,
   HOST_CONTEXT_CHANGED_METHOD,
+  DOWNLOAD_FILE_METHOD,
 } from '@modelcontextprotocol/ext-apps';
 
 // Zod schemas for runtime validation
@@ -63,6 +64,8 @@ export {
   McpUiToolVisibilitySchema,
   McpUiToolMetaSchema,
   McpUiSupportedContentBlockModalitiesSchema,
+  McpUiDownloadFileRequestSchema,
+  McpUiDownloadFileResultSchema,
 } from '@modelcontextprotocol/ext-apps';
 
 // Protocol request/result/notification types
@@ -85,6 +88,8 @@ export type {
   McpUiHostContextChangedNotification,
   McpUiInitializedNotification,
   McpUiSizeChangedNotification,
+  McpUiDownloadFileRequest,
+  McpUiDownloadFileResult,
   AppRequest,
   AppNotification,
   AppResult,

@@ -1,0 +1,87 @@
+---
+title: "useDownloadFile"
+description: "Download files through the host."
+keywords: ["MCP Apps", "ChatGPT Apps", "React hooks", "file download", "export"]
+---
+
+<Badge color="yellow">sunpeak API</Badge>
+
+## Overview
+
+Returns a function to download files through the host. Since MCP Apps run in sandboxed iframes where direct downloads are blocked, this provides a host-mediated mechanism for file exports.
+
+Supports embedded text content, embedded binary (base64) content, and resource links that the host fetches on behalf of the app.
+
+See the [MCP Apps downloadFile request](/mcp-apps/app/requests#downloadfile) for protocol details.
+
+## Import
+
+```tsx
+import { useDownloadFile } from 'sunpeak';
+```
+
+## Signature
+
+```tsx
+function useDownloadFile(): (params: DownloadFileParams) => Promise<DownloadFileResult | undefined>
+```
+
+### DownloadFileParams
+
+<ResponseField name="contents" type="(EmbeddedResource | ResourceLink)[]" required>
+  Resource contents to download — embedded (inline data) or linked (host fetches).
+</ResponseField>
+
+## Returns
+
+<ResponseField name="downloadFile" type="(params: DownloadFileParams) => Promise<DownloadFileResult | undefined>">
+  Function to request a file download through the host.
+</ResponseField>
+
+### DownloadFileResult
+
+<ResponseField name="isError" type="boolean">
+  Whether the download failed (e.g. user cancelled or host denied).
+</ResponseField>
+
+## Usage
+
+### Embedded text content
+
+```tsx
+import { useDownloadFile } from 'sunpeak';
+
+function ExportButton({ data }: { data: unknown }) {
+  const downloadFile = useDownloadFile();
+
+  return (
+    <button onClick={() => downloadFile({
+      contents: [{
+        type: 'resource',
+        resource: {
+          uri: 'file:///export.json',
+          mimeType: 'application/json',
+          text: JSON.stringify(data, null, 2),
+        },
+      }],
+    })}>
+      Export JSON
+    </button>
+  );
+}
+```
+
+### Resource link (host fetches)
+
+```tsx
+const downloadFile = useDownloadFile();
+
+await downloadFile({
+  contents: [{
+    type: 'resource_link',
+    uri: 'https://api.example.com/reports/q4.pdf',
+    name: 'Q4 Report',
+    mimeType: 'application/pdf',
+  }],
+});
+```

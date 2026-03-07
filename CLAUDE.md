@@ -135,6 +135,56 @@ interface HostShell {
 }
 ```
 
+## Dev Server (`bin/commands/dev.mjs`)
+
+The `sunpeak dev` command runs a multi-server architecture:
+
+1. **loaderServer** — A Vite server in middleware mode (`hmr: false`) used solely for `ssrLoadModule()` to dynamically import tool files and discover simulations. Must stay alive for the duration of the dev session (Vite 7+ invalidates loaded modules when the server closes).
+2. **mcpViteServer** — A Vite dev server that serves the simulator UI with HMR on a non-default port (`hmr: { port: 24679 }`) to avoid conflicts with the loader.
+3. **MCP stdio server** — A child process (`sunpeak start`) for tool execution.
+
+Port management: The loaderServer disables HMR entirely. The mcpViteServer uses port 24679 for its WebSocket. The main dev server listens on the user-facing port (default 5173).
+
+## Documentation (`docs/`)
+
+Docs are built with [Mintlify](https://mintlify.com). Structure:
+
+- **`docs/docs.json`** — Navigation config. Three tabs: Documentation, API Reference, MCP Apps.
+- **`docs/api-reference/hooks/`** — One `.mdx` file per sunpeak hook. Badge: `<Badge color="yellow">sunpeak API</Badge>`.
+- **`docs/mcp-apps/`** — MCP Apps SDK documentation (protocol-level, not sunpeak-specific). Badge: `<Badge color="green">MCP Apps SDK</Badge>`.
+- **`docs/mcp-apps/types/protocol-reference.mdx`** — Complete protocol type/schema reference.
+
+When adding new hooks or features, you must: create the hook doc page, add it to `docs.json` navigation (alphabetical within its group), and update cross-references (e.g., the `<Note>` in `mcp-apps/app/requests.mdx` that lists convenience hooks).
+
+## Upgrading Dependencies
+
+### General Process
+1. Update `packages/sunpeak/package.json` and `packages/sunpeak/template/package.json`
+2. Run `pnpm install` from monorepo root
+3. Verify: `pnpm --filter sunpeak typecheck && pnpm --filter sunpeak lint && pnpm --filter sunpeak test -- --run && pnpm --filter sunpeak build`
+4. Regenerate examples: `pnpm --filter sunpeak generate-examples`
+
+### Upgrading `@modelcontextprotocol/ext-apps` (MCP Apps SDK)
+
+This is the upstream SDK that sunpeak wraps. Upgrades often introduce new `App` methods, types, schemas, and capabilities that sunpeak must surface. Follow this checklist:
+
+1. **Find the exact diff** — Check the SDK's changelog or diff the installed package (`node_modules/@modelcontextprotocol/ext-apps/dist/`) to identify new exports: methods on `App`, types, Zod schemas, method constants, and host capabilities.
+2. **New `App` methods → new hooks** — For each new method on the `App` class (e.g., `app.downloadFile()`, `app.readServerResource()`):
+   - Create a hook in `src/hooks/` following the `useCallServerTool`/`useOpenLink` pattern: `useCallback` + `useApp()` null check + `console.warn` fallback.
+   - Export from `src/hooks/index.ts` (alphabetical within the "Action hooks" section).
+   - Create a doc page in `docs/api-reference/hooks/` and add to `docs.json`.
+3. **New types/schemas/constants → re-exports** — Add to `src/index.ts` in the appropriate section (method constants, Zod schemas, or protocol types). Update `docs/mcp-apps/types/protocol-reference.mdx`.
+4. **New host capabilities** — Add to `DEFAULT_HOST_CAPABILITIES` in `src/simulator/mcp-app-host.ts` and add the corresponding `bridge.on*` handler.
+5. **Update docs version note** — Bump the SDK version in `docs/mcp-apps/introduction.mdx` and `docs/mcp-apps/types/protocol-reference.mdx`.
+6. **Check for deprecations** — If new generic APIs supersede platform-specific hooks (e.g., `useDownloadFile` superseding `useGetFileDownloadUrl`), add `@deprecated` JSDoc to the old hook and remove its docs.
+7. **Update `requests.mdx`** — Add sections for new `App` methods in `docs/mcp-apps/app/requests.mdx` and update the `<Note>` listing convenience hooks.
+
+### SDK Export Structure
+
+The SDK's main entry (`app.d.ts`) uses `export * from "./types"` to re-export all types, schemas, and constants. To discover available exports, check:
+- `node_modules/@modelcontextprotocol/ext-apps/dist/types.d.ts` — All type definitions
+- `node_modules/@modelcontextprotocol/ext-apps/dist/app.d.ts` — `App` class methods
+
 ## Conventions
 - pnpm workspace with packages at `packages/*` and `packages/sunpeak/template`
 - ESM-first (`"type": "module"`)
@@ -143,3 +193,5 @@ interface HostShell {
 - Tools discovered from `src/tools/{name}.ts` (each exports `tool: AppToolConfig`, `schema`, `default` handler)
 - Simulations discovered from `tests/simulations/*.json` (flat directory, `"tool"` string field references tool filename)
 - Optional server entry at `src/server.ts` (exports `auth()` for request authentication)
+- Hook file naming: `use-{kebab-name}.ts` → export `use{PascalName}` (e.g., `use-download-file.ts` → `useDownloadFile`)
+- SDK re-exports in `src/index.ts` are organized into four sections: core classes/functions, method constants, Zod schemas, protocol types

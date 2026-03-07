@@ -21,6 +21,7 @@ const DEFAULT_HOST_CAPABILITIES: McpUiHostCapabilities = {
   openLinks: {},
   serverTools: {},
   serverResources: {},
+  downloadFile: {},
   logging: {},
   updateModelContext: { text: {} },
   message: { text: {} },
@@ -40,6 +41,7 @@ export interface McpAppHostOptions {
   onSizeChanged?: (params: { width?: number; height?: number }) => void;
   onLog?: (params: LoggingMessageNotification['params']) => void;
   onCallTool?: (params: CallToolRequest['params']) => CallToolResult | Promise<CallToolResult>;
+  onDownloadFile?: (contents: unknown[]) => void;
   /** Called after the iframe confirms rendering in a new display mode (paint fence resolved). */
   onDisplayModeReady?: (mode: string) => void;
 }
@@ -167,6 +169,15 @@ export class McpAppHost {
           },
         ],
       };
+    };
+
+    this.bridge.ondownloadfile = async ({ contents }) => {
+      if (this.options.onDownloadFile) {
+        this.options.onDownloadFile(contents);
+      } else {
+        console.log('[MCP App] downloadFile:', contents.length, 'item(s)');
+      }
+      return {};
     };
   }
 

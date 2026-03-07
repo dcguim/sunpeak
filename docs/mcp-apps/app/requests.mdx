@@ -12,7 +12,7 @@ import { App } from "sunpeak";
 ```
 
 <Note>
-sunpeak provides convenience hooks for most of these methods: [`useCallServerTool`](/api-reference/hooks/use-call-server-tool), [`useSendMessage`](/api-reference/hooks/use-send-message), [`useUpdateModelContext`](/api-reference/hooks/use-update-model-context), [`useOpenLink`](/api-reference/hooks/use-open-link), [`useRequestDisplayMode`](/api-reference/hooks/use-request-display-mode), and [`useSendLog`](/api-reference/hooks/use-send-log). Use those instead of calling `app` methods directly in React components.
+sunpeak provides convenience hooks for most of these methods: [`useCallServerTool`](/api-reference/hooks/use-call-server-tool), [`useDownloadFile`](/api-reference/hooks/use-download-file), [`useListServerResources`](/api-reference/hooks/use-list-server-resources), [`useReadServerResource`](/api-reference/hooks/use-read-server-resource), [`useSendMessage`](/api-reference/hooks/use-send-message), [`useUpdateModelContext`](/api-reference/hooks/use-update-model-context), [`useOpenLink`](/api-reference/hooks/use-open-link), [`useRequestDisplayMode`](/api-reference/hooks/use-request-display-mode), and [`useSendLog`](/api-reference/hooks/use-send-log). Use those instead of calling `app` methods directly in React components.
 </Note>
 
 ## Overview
@@ -171,6 +171,54 @@ await app.downloadFile({
     mimeType: "application/pdf",
   }],
 });
+```
+
+## readServerResource
+
+Read a resource from the originating MCP server (proxied through the host).
+
+```ts
+async readServerResource(
+  params: { uri: string },
+  options?: RequestOptions,
+): Promise<ReadResourceResult>
+```
+
+```ts
+const result = await app.readServerResource({
+  uri: "videos://bunny-1mb",
+});
+
+const content = result.contents[0];
+if (content && "blob" in content) {
+  const binary = Uint8Array.from(atob(content.blob), (c) => c.charCodeAt(0));
+  const blob = new Blob([binary], { type: content.mimeType });
+  videoElement.src = URL.createObjectURL(blob);
+}
+```
+
+## listServerResources
+
+List available resources on the originating MCP server (proxied through the host). Supports pagination via cursor.
+
+```ts
+async listServerResources(
+  params?: { cursor?: string },
+  options?: RequestOptions,
+): Promise<ListResourcesResult>
+```
+
+```ts
+const result = await app.listServerResources();
+
+for (const resource of result.resources) {
+  console.log(resource.name, resource.uri, resource.mimeType);
+}
+
+// Paginate if more results exist
+if (result.nextCursor) {
+  const next = await app.listServerResources({ cursor: result.nextCursor });
+}
 ```
 
 ## requestDisplayMode
