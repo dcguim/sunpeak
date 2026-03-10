@@ -244,6 +244,44 @@ for (const host of hosts) {
         const root = page.locator('#root');
         await expect(root).not.toBeEmpty();
       });
+
+      test('should show server success message when confirming', async ({ page }) => {
+        await page.goto(
+          createSimulatorUrl({
+            simulation: 'review-post',
+            theme: 'dark',
+            host,
+          })
+        );
+
+        const iframe = page.frameLocator('iframe');
+        const publishButton = iframe.locator('button:has-text("Publish")');
+        await expect(publishButton).toBeVisible();
+        await publishButton.click();
+
+        // Should show the server's success message from serverTools mock
+        await expect(iframe.locator('text=Completed.')).toBeVisible();
+        // Should also show what button was pressed
+        await expect(iframe.locator('text=Publishing post...')).toBeVisible();
+      });
+
+      test('should show server cancel message when rejecting', async ({ page }) => {
+        await page.goto(
+          createSimulatorUrl({
+            simulation: 'review-post',
+            theme: 'dark',
+            host,
+          })
+        );
+
+        const iframe = page.frameLocator('iframe');
+        const cancelButton = iframe.locator('button:has-text("Cancel")');
+        await expect(cancelButton).toBeVisible();
+        await cancelButton.click();
+
+        // Server returned cancelled status via serverTools when condition
+        await expect(iframe.locator('text=Cancelled.')).toBeVisible();
+      });
     });
 
     test.describe('Review Purchase Simulation', () => {
@@ -265,6 +303,64 @@ for (const host of hosts) {
 
         const root = page.locator('#root');
         await expect(root).not.toBeEmpty();
+      });
+
+      test('should show loading then result when placing order', async ({ page }) => {
+        await page.goto(
+          createSimulatorUrl({
+            simulation: 'review-purchase',
+            theme: 'light',
+            host,
+          })
+        );
+
+        const iframe = page.frameLocator('iframe');
+        const placeOrderButton = iframe.locator('button:has-text("Place Order")');
+        await expect(placeOrderButton).toBeVisible();
+        await placeOrderButton.click();
+
+        // After server responds, should show what the user clicked and the server result
+        await expect(iframe.locator('text=Placing order...')).toBeVisible();
+        await expect(iframe.locator('text=Completed.')).toBeVisible();
+      });
+    });
+
+    test.describe('Server Tool Simulation via serverTools field', () => {
+      test('should confirm review-diff and show server success', async ({ page }) => {
+        await page.goto(
+          createSimulatorUrl({
+            simulation: 'review-diff',
+            theme: 'dark',
+            host,
+          })
+        );
+
+        const iframe = page.frameLocator('iframe');
+        const applyButton = iframe.locator('button:has-text("Apply Changes")');
+        await expect(applyButton).toBeVisible();
+        await applyButton.click();
+
+        // Should show the decision label and server response
+        await expect(iframe.locator('text=Applying changes...')).toBeVisible();
+        await expect(iframe.locator('text=Completed.')).toBeVisible();
+      });
+
+      test('should cancel review-diff and show server cancelled', async ({ page }) => {
+        await page.goto(
+          createSimulatorUrl({
+            simulation: 'review-diff',
+            theme: 'dark',
+            host,
+          })
+        );
+
+        const iframe = page.frameLocator('iframe');
+        const cancelButton = iframe.locator('button:has-text("Cancel")');
+        await expect(cancelButton).toBeVisible();
+        await cancelButton.click();
+
+        // Server returned cancelled status via when condition matching
+        await expect(iframe.locator('text=Cancelled.')).toBeVisible();
       });
     });
   });

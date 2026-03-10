@@ -70,7 +70,7 @@ export interface ProductionTool {
   name: string;
   /** Tool config from the `tool` export */
   tool: {
-    resource: string;
+    resource?: string;
     title?: string;
     description?: string;
     annotations?: Record<string, unknown>;
@@ -182,87 +182,112 @@ export function createProductionMcpServer(config: ProductionServerConfig): McpSe
   // (multiple tools can reference the same resource, e.g. review-diff and review-post)
   const registeredResources = new Set<string>();
 
+  let toolCount = 0;
+
   for (const tool of tools) {
-    const res = resourceByName.get(tool.tool.resource);
-    if (!res) {
-      log('warn', `Resource "${tool.tool.resource}" not found for tool "${tool.name}". Skipping.`);
+    // Build the handler callback (shared by UI and plain tools)
+    const makeCallback = () => {
+      return async (
+        ...cbArgs: [Record<string, unknown>, ToolHandlerExtra] | [ToolHandlerExtra]
+      ) => {
+        const hasSchema = !!tool.schema;
+        const args: Record<string, unknown> = hasSchema
+          ? (cbArgs[0] as Record<string, unknown>)
+          : {};
+        const extra = (hasSchema ? cbArgs[1] : cbArgs[0]) as ToolHandlerExtra;
+
+        const argKeys = Object.keys(args);
+        const argsStr = argKeys.length > 0 ? `{${argKeys.join(', ')}}` : '{}';
+        log('info', `CallTool: ${tool.name}${argsStr}`);
+
+        const result = await tool.handler(args, extra);
+
+        // Normalize string returns to CallToolResult
+        if (typeof result === 'string') {
+          return { content: [{ type: 'text' as const, text: result }] };
+        }
+        return result;
+      };
+    };
+
+    const resourceName = tool.tool.resource;
+    const res = resourceName ? resourceByName.get(resourceName) : undefined;
+
+    if (resourceName && !res) {
+      log('warn', `Resource "${resourceName}" not found for tool "${tool.name}". Skipping.`);
       continue;
     }
 
-    // Register resource (once per URI)
-    if (!registeredResources.has(res.uri)) {
-      registeredResources.add(res.uri);
-      registerAppResource(
-        mcpServer,
-        res.name,
-        res.uri,
-        {
-          description: res.description,
-          _meta: res._meta,
-        },
-        async () => ({
-          contents: [
-            {
-              uri: res.uri,
-              mimeType: RESOURCE_MIME_TYPE,
-              text: res.html,
-              _meta: res._meta,
-            },
-          ],
-        })
-      );
-    }
+    if (res) {
+      // ── UI tool: register resource + tool via ext-apps helper ──
 
-    // Register tool with real handler and Zod schema
-    // Cast inputSchema — at runtime it's a Zod shape from the tool module,
-    // but typed as Record<string, unknown> since we load dynamically
-    const toolConfig: Record<string, unknown> = {
-      title: tool.tool.title,
-      description: tool.tool.description,
-      annotations: tool.tool.annotations,
-      ...(tool.schema ? { inputSchema: tool.schema } : {}),
-      _meta: {
-        ...tool.tool._meta,
-        ui: {
-          resourceUri: res.uri,
-          ...((tool.tool._meta?.ui as Record<string, unknown>) ?? {}),
-        },
-      },
-    };
-    // The registerAppTool callback signature depends on whether inputSchema is provided:
-    // - With inputSchema: (args, extra) => CallToolResult
-    // - Without inputSchema: (extra) => CallToolResult
-    // We always pass through to the user's handler which expects (args, extra).
-    const callback = async (
-      ...cbArgs: [Record<string, unknown>, ToolHandlerExtra] | [ToolHandlerExtra]
-    ) => {
-      const hasSchema = !!tool.schema;
-      const args: Record<string, unknown> = hasSchema ? (cbArgs[0] as Record<string, unknown>) : {};
-      const extra = (hasSchema ? cbArgs[1] : cbArgs[0]) as ToolHandlerExtra;
-
-      const argKeys = Object.keys(args);
-      const argsStr = argKeys.length > 0 ? `{${argKeys.join(', ')}}` : '{}';
-      log('info', `CallTool: ${tool.name}${argsStr}`);
-
-      const result = await tool.handler(args, extra);
-
-      // Normalize string returns to CallToolResult
-      if (typeof result === 'string') {
-        return { content: [{ type: 'text' as const, text: result }] };
+      // Register resource (once per URI)
+      if (!registeredResources.has(res.uri)) {
+        registeredResources.add(res.uri);
+        registerAppResource(
+          mcpServer,
+          res.name,
+          res.uri,
+          {
+            description: res.description,
+            _meta: res._meta,
+          },
+          async () => ({
+            contents: [
+              {
+                uri: res.uri,
+                mimeType: RESOURCE_MIME_TYPE,
+                text: res.html,
+                _meta: res._meta,
+              },
+            ],
+          })
+        );
       }
-      return result;
-    };
-    // Cast config and callback — tool modules are loaded dynamically at runtime,
-    // so Zod shapes and callback generics can't be statically verified.
-    registerAppTool(
-      mcpServer,
-      tool.name,
-      toolConfig as Parameters<typeof registerAppTool>[2],
-      callback as Parameters<typeof registerAppTool>[3]
-    );
+
+      // Register tool with UI metadata via registerAppTool
+      const toolConfig: Record<string, unknown> = {
+        title: tool.tool.title,
+        description: tool.tool.description,
+        annotations: tool.tool.annotations,
+        ...(tool.schema ? { inputSchema: tool.schema } : {}),
+        _meta: {
+          ...tool.tool._meta,
+          ui: {
+            resourceUri: res.uri,
+            ...((tool.tool._meta?.ui as Record<string, unknown>) ?? {}),
+          },
+        },
+      };
+      // Cast config and callback — tool modules are loaded dynamically at runtime,
+      // so Zod shapes and callback generics can't be statically verified.
+      registerAppTool(
+        mcpServer,
+        tool.name,
+        toolConfig as Parameters<typeof registerAppTool>[2],
+        makeCallback() as Parameters<typeof registerAppTool>[3]
+      );
+    } else {
+      // ── Plain tool (no UI): register directly via mcpServer.tool() ──
+      // Use the description + callback overload, with schema if available.
+      // The mcpServer.tool() overloads are complex, so we call it dynamically.
+      const cb = makeCallback();
+      const toolArgs: unknown[] = [tool.name];
+      if (tool.schema) {
+        toolArgs.push(tool.schema);
+      }
+      toolArgs.push(async (...args: unknown[]) => {
+        // Normalize to (args, extra) for the shared callback
+        if (tool.schema) {
+          return cb(args[0] as Record<string, unknown>, args[1] as ToolHandlerExtra);
+        }
+        return cb(args[0] as ToolHandlerExtra);
+      });
+      (mcpServer.tool as (...a: unknown[]) => unknown)(...toolArgs);
+    }
+    toolCount++;
   }
 
-  const toolCount = tools.filter((t) => resourceByName.has(t.tool.resource)).length;
   const resourceCount = registeredResources.size;
   log('info', `Registered ${toolCount} tool(s) and ${resourceCount} resource(s)`);
 

@@ -4,6 +4,7 @@ import {
   useToolData,
   useHostContext,
   useDisplayMode,
+  useCallServerTool,
   SafeArea,
 } from 'sunpeak';
 import type { ResourceConfig } from 'sunpeak';
@@ -88,7 +89,7 @@ type Section = { title?: string } & (
 
 /** Tool call configuration for domain-specific review actions */
 interface ReviewTool {
-  /** Tool name to call (e.g., "complete_purchase", "publish_post") */
+  /** Tool name to call (e.g., "review") */
   name: string;
   /** Additional arguments to pass to the tool */
   arguments?: Record<string, unknown>;
@@ -120,6 +121,10 @@ interface ReviewData {
 interface ReviewState {
   decision: 'accepted' | 'rejected' | null;
   decidedAt: string | null;
+  pending: boolean;
+  serverMessage: string | null;
+  /** Whether the server indicated failure (from CallToolResult.isError) */
+  serverError: boolean;
 }
 
 // ============================================================================
@@ -499,6 +504,9 @@ export function ReviewResource() {
   const [state, setState] = useAppState<ReviewState>({
     decision: null,
     decidedAt: null,
+    pending: false,
+    serverMessage: null,
+    serverError: false,
   });
 
   const context = useHostContext();
@@ -513,45 +521,45 @@ export function ReviewResource() {
     app?.requestDisplayMode({ mode: 'fullscreen' });
   };
 
-  const handleAccept = () => {
+  const callServerTool = useCallServerTool();
+
+  const handleDecision = async (confirmed: boolean) => {
     const decidedAt = new Date().toISOString();
-    setState({
-      decision: 'accepted',
-      decidedAt,
-    });
+    const decision = confirmed ? 'accepted' : 'rejected';
 
     const tool = data.reviewTool;
-    if (tool) {
-      console.log('callTool', {
-        name: tool.name,
-        arguments: {
-          ...tool.arguments,
-          confirmed: true,
-          decidedAt,
-        },
-      });
+    if (!tool) {
+      // No server tool — show result immediately
+      setState({ decision, decidedAt, pending: false, serverMessage: null, serverError: false });
+      return;
     }
-  };
 
-  const handleReject = () => {
-    const decidedAt = new Date().toISOString();
-    setState({
-      decision: 'rejected',
-      decidedAt,
+    // Show loading state while waiting for server response
+    setState({ decision, decidedAt, pending: true, serverMessage: null, serverError: false });
+
+    const result = await callServerTool({
+      name: tool.name,
+      arguments: { ...tool.arguments, confirmed, decidedAt },
     });
 
-    const tool = data.reviewTool;
-    if (tool) {
-      console.log('callTool', {
-        name: tool.name,
-        arguments: {
-          ...tool.arguments,
-          confirmed: false,
-          decidedAt,
-        },
-      });
-    }
+    // Extract structured response (status + message) from the server tool result.
+    // Falls back to text content if structuredContent is not available.
+    const structured = (result as { structuredContent?: { status?: string; message?: string } })
+      ?.structuredContent;
+    const textEntry = result?.content?.find(
+      (c: { type: string; text?: string }) => c.type === 'text' && c.text
+    );
+    const fallbackText = textEntry && 'text' in textEntry ? (textEntry.text as string) : null;
+    const serverMessage = structured?.message ?? fallbackText;
+    const serverError =
+      structured?.status === 'error' ||
+      structured?.status === 'cancelled' ||
+      !!(result as { isError?: boolean })?.isError;
+    setState({ decision, decidedAt, pending: false, serverMessage, serverError });
   };
+
+  const handleAccept = () => handleDecision(true);
+  const handleReject = () => handleDecision(false);
 
   const acceptLabel = data.acceptLabel ?? 'Confirm';
   const rejectLabel = data.rejectLabel ?? 'Cancel';
@@ -633,22 +641,51 @@ export function ReviewResource() {
               {acceptLabel}
             </Button>
           </div>
+        ) : state.pending ? (
+          <div className="flex items-center justify-center gap-2 text-[var(--color-text-secondary)]">
+            <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+            <span className="font-medium">
+              {decision === 'accepted' ? 'Confirming...' : 'Cancelling...'}
+            </span>
+          </div>
         ) : (
           <div className="flex flex-col items-center gap-1">
-            <div
-              className="flex items-center justify-center gap-2"
-              style={{
-                color:
-                  decision === 'accepted'
-                    ? 'light-dark(#16a34a, #4ade80)'
-                    : 'light-dark(#dc2626, #f87171)',
-              }}
-            >
-              <span className="text-lg">{decision === 'accepted' ? '\u2713' : '\u2717'}</span>
-              <span className="font-medium">
-                {decision === 'accepted' ? acceptedMessage : rejectedMessage}
-              </span>
-            </div>
+            {state.serverMessage ? (
+              <>
+                {/* What the user clicked */}
+                <span className="text-xs text-[var(--color-text-secondary)]">
+                  {decision === 'accepted' ? acceptedMessage : rejectedMessage}
+                </span>
+                {/* Server's result — color based on structuredContent.status */}
+                <div
+                  className="flex items-center justify-center gap-2"
+                  style={{
+                    color: state.serverError
+                      ? 'light-dark(#dc2626, #f87171)'
+                      : 'light-dark(#16a34a, #4ade80)',
+                  }}
+                >
+                  <span className="text-lg">{state.serverError ? '\u2717' : '\u2713'}</span>
+                  <span className="font-medium">{state.serverMessage}</span>
+                </div>
+              </>
+            ) : (
+              /* No server message (no reviewTool) — icon based on decision */
+              <div
+                className="flex items-center justify-center gap-2"
+                style={{
+                  color:
+                    decision === 'accepted'
+                      ? 'light-dark(#16a34a, #4ade80)'
+                      : 'light-dark(#dc2626, #f87171)',
+                }}
+              >
+                <span className="text-lg">{decision === 'accepted' ? '\u2713' : '\u2717'}</span>
+                <span className="font-medium">
+                  {decision === 'accepted' ? acceptedMessage : rejectedMessage}
+                </span>
+              </div>
+            )}
             {state.decidedAt && (
               <span className="text-xs text-[var(--color-text-secondary)]">
                 {new Date(state.decidedAt).toLocaleString()}

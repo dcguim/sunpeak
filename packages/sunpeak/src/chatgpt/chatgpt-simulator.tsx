@@ -20,6 +20,7 @@ import type {
 } from '@modelcontextprotocol/ext-apps';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import type { ScreenWidth } from '../simulator/simulator-types';
+import { resolveServerToolResult } from '../types/simulation';
 import type { Simulation } from '../types/simulation';
 
 type Platform = NonNullable<McpUiHostContext['platform']>;
@@ -47,7 +48,6 @@ interface ChatGPTSimulatorProps {
  * - hover: 'true' | 'false'
  * - touch: 'true' | 'false'
  * - safeAreaTop, safeAreaBottom, safeAreaLeft, safeAreaRight: number
- * - host: 'chatgpt' | 'claude'
  */
 function parseUrlParams(): {
   simulation?: string;
@@ -123,7 +123,8 @@ export function ChatGPTSimulator({
   appName = 'Sunpeak',
   appIcon,
 }: ChatGPTSimulatorProps) {
-  const simulationNames = Object.keys(simulations);
+  // Only list simulations with a UI resource — backend-only tools have nothing to render.
+  const simulationNames = Object.keys(simulations).filter((name) => simulations[name].resource);
   const urlParams = useMemo(() => parseUrlParams(), []);
   const [screenWidth, setScreenWidth] = React.useState<ScreenWidth>('full');
 
@@ -314,7 +315,7 @@ export function ChatGPTSimulator({
   const resourceUrl = selectedSim?.resourceUrl;
   const resourceScript = selectedSim?.resourceScript;
 
-  const csp = selectedSim ? extractResourceCSP(selectedSim.resource) : undefined;
+  const csp = selectedSim?.resource ? extractResourceCSP(selectedSim.resource) : undefined;
 
   // Build content based on rendering mode.
   // All rendering goes through IframeResource for consistent behavior with ChatGPT.
@@ -324,6 +325,27 @@ export function ChatGPTSimulator({
   // hasn't yet confirmed it has rendered with the new mode.
   // For non-iframe content (children), there's no async rendering so no transition.
   const isTransitioning = hasIframeContent && displayMode !== readyDisplayMode;
+
+  // Handle callServerTool from the iframe by resolving mock responses from the
+  // current simulation's `serverTools` map.
+  const handleCallTool = useCallback(
+    (params: { name: string; arguments?: Record<string, unknown> }): CallToolResult => {
+      const mock = selectedSim?.serverTools?.[params.name];
+      if (mock) {
+        const result = resolveServerToolResult(mock, params.arguments);
+        if (result) return result;
+      }
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `[Simulator] Tool "${params.name}" called — no serverTools mock found in simulation "${selectedSimulationName}".`,
+          },
+        ],
+      };
+    },
+    [selectedSim, selectedSimulationName]
+  );
 
   // The wrapper div stays mounted across key changes, providing a themed
   // background while the iframe (opacity: 0) loads new content.
@@ -342,6 +364,7 @@ export function ChatGPTSimulator({
           hostOptions={{
             onDisplayModeChange: handleDisplayModeChange,
             onUpdateModelContext: handleUpdateModelContext,
+            onCallTool: handleCallTool,
           }}
           onDisplayModeReady={handleDisplayModeReady}
           debugInjectState={modelContext}
@@ -363,6 +386,7 @@ export function ChatGPTSimulator({
           hostOptions={{
             onDisplayModeChange: handleDisplayModeChange,
             onUpdateModelContext: handleUpdateModelContext,
+            onCallTool: handleCallTool,
           }}
           onDisplayModeReady={handleDisplayModeReady}
           debugInjectState={modelContext}
@@ -386,12 +410,13 @@ export function ChatGPTSimulator({
                   onChange={(value) => setSelectedSimulationName(value)}
                   options={simulationNames.map((name) => {
                     const sim = simulations[name];
-                    const resourceTitle =
-                      (sim.resource.title as string | undefined) || sim.resource.name;
+                    const resourceTitle = sim.resource
+                      ? (sim.resource.title as string | undefined) || sim.resource.name
+                      : undefined;
                     const toolTitle = (sim.tool.title as string | undefined) || sim.tool.name;
                     return {
                       value: name,
-                      label: `${resourceTitle}: ${toolTitle}`,
+                      label: resourceTitle ? `${resourceTitle}: ${toolTitle}` : toolTitle,
                     };
                   })}
                 />

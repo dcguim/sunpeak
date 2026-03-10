@@ -43,11 +43,15 @@ function useCallServerTool(): (params: CallServerToolParams) => Promise<CallServ
 ### CallServerToolResult
 
 <ResponseField name="content" type="Array<{ type: string; text?: string }>">
-  Tool response content.
+  Tool response content (human-readable text for the host model).
+</ResponseField>
+
+<ResponseField name="structuredContent" type="Record<string, unknown>">
+  Structured data from the tool response. Use this for machine-readable data the calling resource needs to render (e.g., `{ status: 'success', message: '...' }`).
 </ResponseField>
 
 <ResponseField name="isError" type="boolean">
-  Whether the tool call resulted in an error.
+  Whether the tool call resulted in an error. Only set for actual execution failures — not for expected outcomes like cancellations.
 </ResponseField>
 
 ## Usage

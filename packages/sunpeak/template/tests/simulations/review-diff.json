@@ -60,20 +60,41 @@
       ],
       "acceptLabel": "Apply Changes",
       "rejectLabel": "Cancel",
-      "acceptedMessage": "Changes applied",
-      "rejectedMessage": "Changes cancelled",
+      "acceptedMessage": "Applying changes...",
+      "rejectedMessage": "Cancelling changes...",
       "reviewTool": {
-        "name": "apply_changes",
+        "name": "review",
         "arguments": {
-          "changesetId": "cs_789",
-          "files": [
-            "src/lib/jwt.ts",
-            "src/middleware/auth.ts",
-            "src/routes/login.ts",
-            "src/lib/session.ts"
-          ]
+          "action": "apply_changes",
+          "payload": {
+            "changesetId": "cs_789",
+            "files": [
+              "src/lib/jwt.ts",
+              "src/middleware/auth.ts",
+              "src/routes/login.ts",
+              "src/lib/session.ts"
+            ]
+          }
         }
       }
     }
+  },
+  "serverTools": {
+    "review": [
+      {
+        "when": { "confirmed": true },
+        "result": {
+          "content": [{ "type": "text", "text": "Completed." }],
+          "structuredContent": { "status": "success", "message": "Completed." }
+        }
+      },
+      {
+        "when": { "confirmed": false },
+        "result": {
+          "content": [{ "type": "text", "text": "Cancelled." }],
+          "structuredContent": { "status": "cancelled", "message": "Cancelled." }
+        }
+      }
+    ]
   }
 }

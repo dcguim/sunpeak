@@ -103,7 +103,7 @@ packages/sunpeak/
 ```typescript
 // Tool file export (src/tools/{name}.ts)
 interface AppToolConfig extends ToolConfig {
-  resource: string;            // Resource name (derived from directory: src/resources/{name}/)
+  resource?: string;           // Resource name (derived from directory: src/resources/{name}/). Omit for tools without a UI.
 }
 
 // Simulation fixture (tests/simulations/*.json)
@@ -112,7 +112,13 @@ interface SimulationJson {
   userMessage?: string;
   toolInput?: Record<string, unknown>;
   toolResult?: { structuredContent?: unknown };
+  serverTools?: Record<string, ServerToolMock>;  // Mock responses for callServerTool calls
 }
+
+// ServerToolMock: simple (single result) or conditional (when/result array)
+type ServerToolMock =
+  | CallToolResult
+  | Array<{ when: Record<string, unknown>; result: CallToolResult }>;
 
 // Internal simulation (dev server runtime)
 interface Simulation {
@@ -120,9 +126,10 @@ interface Simulation {
   resourceUrl?: string;        // Dev: HTML page URL (Vite HMR)
   resourceScript?: string;     // Prod: JS bundle URL
   tool: Tool;
-  resource: Resource;
+  resource?: Resource;                 // Undefined for tools without a UI
   toolInput?: Record<string, unknown>;
   toolResult?: { content?: [...]; structuredContent?: unknown };
+  serverTools?: Record<string, ServerToolMock>;  // Mock responses for callServerTool
 }
 
 interface HostShell {

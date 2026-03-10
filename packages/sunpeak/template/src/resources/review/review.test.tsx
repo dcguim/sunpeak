@@ -5,9 +5,16 @@ import { ReviewResource } from './review';
 // Mock sunpeak hooks
 const mockSetState = vi.fn();
 const mockRequestDisplayMode = vi.fn();
+const mockCallServerTool = vi.fn();
 
 let mockToolOutput: Record<string, unknown> = { title: 'Test Review' };
-let mockState: Record<string, unknown> = { decision: null, decidedAt: null };
+let mockState: Record<string, unknown> = {
+  decision: null,
+  decidedAt: null,
+  pending: false,
+  serverMessage: null,
+  serverError: false,
+};
 let mockHostContext: {
   deviceCapabilities?: { hover: boolean; touch: boolean };
 } | null = {
@@ -33,6 +40,7 @@ vi.mock('sunpeak', () => ({
   useHostContext: () => mockHostContext,
   useDisplayMode: () => mockDisplayMode,
   useAppState: () => [mockState, mockSetState],
+  useCallServerTool: () => mockCallServerTool,
   SafeArea: ({ children, ...props }: { children: React.ReactNode; [key: string]: unknown }) => (
     <div data-testid="safe-area" {...props}>
       {children}
@@ -85,7 +93,13 @@ describe('ReviewResource', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockToolOutput = { title: 'Test Review' };
-    mockState = { decision: null, decidedAt: null };
+    mockState = {
+      decision: null,
+      decidedAt: null,
+      pending: false,
+      serverMessage: null,
+      serverError: false,
+    };
     mockHostContext = { deviceCapabilities: { hover: true, touch: false } };
     mockDisplayMode = 'inline';
   });
@@ -140,7 +154,7 @@ describe('ReviewResource', () => {
       expect(screen.getByText('Decline')).toBeInTheDocument();
     });
 
-    it('calls setState with accepted decision when accept clicked', () => {
+    it('calls setState with accepted decision (no reviewTool, immediate)', () => {
       render(<ReviewResource />);
 
       const acceptButton = screen.getByText('Confirm');
@@ -150,11 +164,12 @@ describe('ReviewResource', () => {
         expect.objectContaining({
           decision: 'accepted',
           decidedAt: expect.any(String),
+          pending: false,
         })
       );
     });
 
-    it('calls setState with rejected decision when reject clicked', () => {
+    it('calls setState with rejected decision (no reviewTool, immediate)', () => {
       render(<ReviewResource />);
 
       const rejectButton = screen.getByText('Cancel');
@@ -164,8 +179,74 @@ describe('ReviewResource', () => {
         expect.objectContaining({
           decision: 'rejected',
           decidedAt: expect.any(String),
+          pending: false,
         })
       );
+    });
+
+    it('calls server tool with confirmed=true and sets pending when accept clicked', () => {
+      mockToolOutput = {
+        title: 'Test',
+        reviewTool: { name: 'review', arguments: { action: 'place_order' } },
+      };
+      render(<ReviewResource />);
+
+      fireEvent.click(screen.getByText('Confirm'));
+
+      // First setState should set pending: true
+      expect(mockSetState).toHaveBeenCalledWith(
+        expect.objectContaining({
+          decision: 'accepted',
+          pending: true,
+        })
+      );
+      expect(mockCallServerTool).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'review',
+          arguments: expect.objectContaining({
+            action: 'place_order',
+            confirmed: true,
+            decidedAt: expect.any(String),
+          }),
+        })
+      );
+    });
+
+    it('calls server tool with confirmed=false and sets pending when reject clicked', () => {
+      mockToolOutput = {
+        title: 'Test',
+        reviewTool: { name: 'review', arguments: { action: 'place_order' } },
+      };
+      render(<ReviewResource />);
+
+      fireEvent.click(screen.getByText('Cancel'));
+
+      expect(mockSetState).toHaveBeenCalledWith(
+        expect.objectContaining({
+          decision: 'rejected',
+          pending: true,
+        })
+      );
+      expect(mockCallServerTool).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: 'review',
+          arguments: expect.objectContaining({
+            action: 'place_order',
+            confirmed: false,
+          }),
+        })
+      );
+    });
+
+    it('does not call server tool when reviewTool is not set', () => {
+      mockToolOutput = { title: 'Test' };
+      render(<ReviewResource />);
+
+      fireEvent.click(screen.getByText('Confirm'));
+
+      expect(mockCallServerTool).not.toHaveBeenCalled();
+      // No pending state without a reviewTool
+      expect(mockSetState).toHaveBeenCalledWith(expect.objectContaining({ pending: false }));
     });
 
     it('renders danger styling for accept button when acceptDanger is true', () => {
@@ -186,8 +267,43 @@ describe('ReviewResource', () => {
   });
 
   describe('Decision State', () => {
-    it('shows accepted message after accepting', () => {
-      mockState = { decision: 'accepted', decidedAt: '2024-01-01T00:00:00.000Z' };
+    it('shows loading spinner while pending', () => {
+      mockState = {
+        decision: 'accepted',
+        decidedAt: '2024-01-01T00:00:00.000Z',
+        pending: true,
+        serverMessage: null,
+        serverError: false,
+      };
+
+      render(<ReviewResource />);
+
+      expect(screen.getByText('Confirming...')).toBeInTheDocument();
+      expect(screen.queryByText('Confirm')).not.toBeInTheDocument();
+    });
+
+    it('shows cancelling spinner while pending rejection', () => {
+      mockState = {
+        decision: 'rejected',
+        decidedAt: '2024-01-01T00:00:00.000Z',
+        pending: true,
+        serverMessage: null,
+        serverError: false,
+      };
+
+      render(<ReviewResource />);
+
+      expect(screen.getByText('Cancelling...')).toBeInTheDocument();
+    });
+
+    it('shows accepted message when no server message (no reviewTool)', () => {
+      mockState = {
+        decision: 'accepted',
+        decidedAt: '2024-01-01T00:00:00.000Z',
+        pending: false,
+        serverMessage: null,
+        serverError: false,
+      };
 
       render(<ReviewResource />);
 
@@ -195,8 +311,14 @@ describe('ReviewResource', () => {
       expect(screen.queryByText('Confirm')).not.toBeInTheDocument();
     });
 
-    it('shows rejected message after rejecting', () => {
-      mockState = { decision: 'rejected', decidedAt: '2024-01-01T00:00:00.000Z' };
+    it('shows rejected message when no server message (no reviewTool)', () => {
+      mockState = {
+        decision: 'rejected',
+        decidedAt: '2024-01-01T00:00:00.000Z',
+        pending: false,
+        serverMessage: null,
+        serverError: false,
+      };
 
       render(<ReviewResource />);
 
@@ -204,18 +326,30 @@ describe('ReviewResource', () => {
       expect(screen.queryByText('Cancel')).not.toBeInTheDocument();
     });
 
-    it('shows custom accepted message', () => {
+    it('shows custom accepted message when no server message', () => {
       mockToolOutput = { title: 'Test', acceptedMessage: 'Order Placed!' };
-      mockState = { decision: 'accepted', decidedAt: '2024-01-01T00:00:00.000Z' };
+      mockState = {
+        decision: 'accepted',
+        decidedAt: '2024-01-01T00:00:00.000Z',
+        pending: false,
+        serverMessage: null,
+        serverError: false,
+      };
 
       render(<ReviewResource />);
 
       expect(screen.getByText('Order Placed!')).toBeInTheDocument();
     });
 
-    it('shows custom rejected message', () => {
+    it('shows custom rejected message when no server message', () => {
       mockToolOutput = { title: 'Test', rejectedMessage: 'Order Cancelled' };
-      mockState = { decision: 'rejected', decidedAt: '2024-01-01T00:00:00.000Z' };
+      mockState = {
+        decision: 'rejected',
+        decidedAt: '2024-01-01T00:00:00.000Z',
+        pending: false,
+        serverMessage: null,
+        serverError: false,
+      };
 
       render(<ReviewResource />);
 
@@ -223,13 +357,70 @@ describe('ReviewResource', () => {
     });
 
     it('shows decidedAt timestamp', () => {
-      mockState = { decision: 'accepted', decidedAt: '2024-01-15T10:30:00.000Z' };
+      mockState = {
+        decision: 'accepted',
+        decidedAt: '2024-01-15T10:30:00.000Z',
+        pending: false,
+        serverMessage: null,
+        serverError: false,
+      };
 
       render(<ReviewResource />);
 
-      // The timestamp should be displayed
       const timestampElement = screen.getByText(/2024/);
       expect(timestampElement).toBeInTheDocument();
+    });
+
+    it('shows server success message with decision label', () => {
+      mockState = {
+        decision: 'accepted',
+        decidedAt: '2024-01-15T10:30:00.000Z',
+        pending: false,
+        serverMessage: 'Action "place_order" completed successfully.',
+        serverError: false,
+      };
+
+      render(<ReviewResource />);
+
+      // Server message is the primary text
+      expect(screen.getByText('Action "place_order" completed successfully.')).toBeInTheDocument();
+      // Decision label shown as secondary text
+      expect(screen.getByText('Confirmed')).toBeInTheDocument();
+    });
+
+    it('shows server error message with red icon even when user confirmed', () => {
+      mockState = {
+        decision: 'accepted',
+        decidedAt: '2024-01-15T10:30:00.000Z',
+        pending: false,
+        serverMessage: 'Action cancelled by user.',
+        serverError: true,
+      };
+
+      render(<ReviewResource />);
+
+      // Server message shown as primary text
+      expect(screen.getByText('Action cancelled by user.')).toBeInTheDocument();
+      // Decision label still shows what the user clicked
+      expect(screen.getByText('Confirmed')).toBeInTheDocument();
+      // Red X icon (\u2717) should be shown, not green check
+      expect(screen.getByText('\u2717')).toBeInTheDocument();
+      expect(screen.queryByText('\u2713')).not.toBeInTheDocument();
+    });
+
+    it('shows green check for server success', () => {
+      mockState = {
+        decision: 'accepted',
+        decidedAt: '2024-01-15T10:30:00.000Z',
+        pending: false,
+        serverMessage: 'Action completed.',
+        serverError: false,
+      };
+
+      render(<ReviewResource />);
+
+      expect(screen.getByText('\u2713')).toBeInTheDocument();
+      expect(screen.queryByText('\u2717')).not.toBeInTheDocument();
     });
   });
 

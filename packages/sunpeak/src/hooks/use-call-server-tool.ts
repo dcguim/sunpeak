@@ -18,6 +18,8 @@ export interface CallServerToolParams {
 export interface CallServerToolResult {
   /** Content array from the tool response */
   content?: Array<{ type: string; text?: string; [key: string]: unknown }>;
+  /** Structured data from the tool response */
+  structuredContent?: Record<string, unknown>;
   /** Whether the tool call resulted in an error */
   isError?: boolean;
 }

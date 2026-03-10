@@ -11,6 +11,7 @@ import { randomUUID } from 'node:crypto';
 import { registerAppTool, RESOURCE_MIME_TYPE } from '@modelcontextprotocol/ext-apps/server';
 import type { RegisteredResource, RegisteredTool } from '@modelcontextprotocol/sdk/server/mcp.js';
 
+import { z } from 'zod';
 import { type MCPServerConfig, type MCPServerHandle, type SimulationWithDist } from './types.js';
 
 export type { MCPServerConfig, MCPServerHandle, SimulationWithDist } from './types.js';
@@ -124,7 +125,7 @@ function getResourceHtml(
   if (viteMode && simulation.srcPath && !prodBuild) {
     return getViteResourceHtml(simulation.srcPath);
   }
-  return readResourceHtmlProd(simulation.distPath);
+  return readResourceHtmlProd(simulation.distPath!);
 }
 
 /**
@@ -187,9 +188,10 @@ function createAppServer(
     { capabilities: { resources: {}, tools: {} } }
   );
 
-  // Track registered resource URIs to avoid duplicate registration
-  // (multiple simulations can share the same resource, e.g. review-diff and review-post)
+  // Track registered resource URIs and tool names to avoid duplicate registration
+  // (multiple simulations can share the same resource or tool, e.g. review-diff and review-post)
   const registeredUriSet = new Set<string>();
+  const registeredToolNames = new Set<string>();
   const resourceHandles = new Map<string, RegisteredResource>();
   const toolHandles: AppServerResult['toolHandles'] = [];
 
@@ -198,120 +200,191 @@ function createAppServer(
     const resource = simulation.resource;
     const tool = simulation.tool;
     const toolResult = simulation.toolResult ?? { structuredContent: null };
-
-    // Use the resource's URI, or derive a stable one from the resource name.
-    // Must be stable across all sessions — ChatGPT reads resource URIs from the tools/list
-    // response in one session, then fetches the content in a separate resources/read session.
-    const uri = (resource.uri as string) ?? `ui://${resource.name as string}`;
-    const resourceName = resource.name as string;
-    const resourceMeta = (resource._meta as Record<string, unknown>) ?? {};
     const toolMeta = (tool._meta as Record<string, unknown>) ?? {};
 
-    // Register the resource directly via SDK (not ext-apps wrapper) to capture the
-    // RegisteredResource handle for URI updates on rebuild (cache-busting).
-    if (!registeredUriSet.has(uri)) {
-      registeredUriSet.add(uri);
-      const listMeta = viteMode ? injectViteCSP(resourceMeta) : resourceMeta;
-      console.log(`[MCP] RegisterResource: ${uri}`);
-      const handle = mcpServer.registerResource(
-        resourceName,
-        uri,
-        {
-          mimeType: RESOURCE_MIME_TYPE,
-          description: resource.description as string | undefined,
-          _meta: listMeta,
-        },
-        async (
-          readUri: URL,
-          extra: { requestInfo?: { headers?: Record<string, string | string[] | undefined> } }
-        ) => {
-          // Claude's sandbox blocks HTTP script sources, so serve pre-built HTML.
-          // ChatGPT can reach localhost, so it gets Vite HMR.
-          const prodBuild = needsProdBuild(
-            (extra?.requestInfo?.headers as Record<string, string | string[] | undefined>) ?? {}
-          );
-          const readMeta = viteMode && !prodBuild ? injectViteCSP(resourceMeta) : resourceMeta;
+    if (resource) {
+      // ── UI tool: register resource + tool via ext-apps helper ──
 
-          let content: string;
-          try {
-            content = getResourceHtml(simulation, viteMode, prodBuild);
-          } catch (error) {
-            console.error(`[MCP] ReadResource error for ${readUri.href}:`, error);
-            throw error;
+      // Use the resource's URI, or derive a stable one from the resource name.
+      // Must be stable across all sessions — ChatGPT reads resource URIs from the tools/list
+      // response in one session, then fetches the content in a separate resources/read session.
+      const uri = (resource.uri as string) ?? `ui://${resource.name as string}`;
+      const resourceName = resource.name as string;
+      const resourceMeta = (resource._meta as Record<string, unknown>) ?? {};
+
+      // Register the resource directly via SDK (not ext-apps wrapper) to capture the
+      // RegisteredResource handle for URI updates on rebuild (cache-busting).
+      if (!registeredUriSet.has(uri)) {
+        registeredUriSet.add(uri);
+        const listMeta = viteMode ? injectViteCSP(resourceMeta) : resourceMeta;
+        console.log(`[MCP] RegisterResource: ${uri}`);
+        const handle = mcpServer.registerResource(
+          resourceName,
+          uri,
+          {
+            mimeType: RESOURCE_MIME_TYPE,
+            description: resource.description as string | undefined,
+            _meta: listMeta,
+          },
+          async (
+            readUri: URL,
+            extra: { requestInfo?: { headers?: Record<string, string | string[] | undefined> } }
+          ) => {
+            // Claude's sandbox blocks HTTP script sources, so serve pre-built HTML.
+            // ChatGPT can reach localhost, so it gets Vite HMR.
+            const prodBuild = needsProdBuild(
+              (extra?.requestInfo?.headers as Record<string, string | string[] | undefined>) ?? {}
+            );
+            const readMeta = viteMode && !prodBuild ? injectViteCSP(resourceMeta) : resourceMeta;
+
+            let content: string;
+            try {
+              content = getResourceHtml(simulation, viteMode, prodBuild);
+            } catch (error) {
+              console.error(`[MCP] ReadResource error for ${readUri.href}:`, error);
+              throw error;
+            }
+            const sizeKB = (content.length / 1024).toFixed(1);
+            console.log(
+              `[MCP] ReadResource: ${readUri.href} → ${sizeKB}KB${prodBuild ? ' (prod build)' : ' (vite)'}`
+            );
+
+            return {
+              contents: [
+                {
+                  // Use readUri (not closure variable) so the response URI matches after updates
+                  uri: readUri.href,
+                  mimeType: RESOURCE_MIME_TYPE,
+                  text: content,
+                  _meta: readMeta,
+                },
+              ],
+            };
           }
-          const sizeKB = (content.length / 1024).toFixed(1);
+        );
+        resourceHandles.set(resourceName, handle);
+      }
+
+      // Register the tool using ext-apps helper (normalizes ui/resourceUri metadata).
+      // Capture the returned RegisteredTool handle for metadata updates on rebuild.
+      // Note: inputSchema from simulation is JSON Schema, not Zod, so we omit it here
+      // (simulation mode doesn't validate inputs - just logs what was called)
+      const fullToolMeta = {
+        ...toolMeta,
+        ui: {
+          resourceUri: uri,
+          // Preserve tool visibility from simulation metadata if declared
+          ...((toolMeta.ui as Record<string, unknown>)?.visibility
+            ? { visibility: (toolMeta.ui as Record<string, unknown>).visibility }
+            : {}),
+        },
+      };
+      const toolHandle = registerAppTool(
+        mcpServer,
+        tool.name as string,
+        {
+          description: tool.description as string | undefined,
+          _meta: fullToolMeta,
+        },
+        async (extra) => {
+          // Access arguments from request context (no inputSchema = no parsed args)
+          const args =
+            (extra as { request?: { params?: { arguments?: Record<string, unknown> } } }).request
+              ?.params?.arguments ?? {};
+          const argKeys = Object.keys(args);
+          const argsStr = argKeys.length > 0 ? `{${argKeys.join(', ')}}` : '{}';
+          const hasStructuredContent = toolResult?.structuredContent != null;
+
           console.log(
-            `[MCP] ReadResource: ${readUri.href} → ${sizeKB}KB${prodBuild ? ' (prod build)' : ' (vite)'}`
+            `[MCP] CallTool: ${tool.name}${argsStr} → ${hasStructuredContent ? 'structured' : 'text'}`
           );
 
           return {
-            contents: [
+            content: [
               {
-                // Use readUri (not closure variable) so the response URI matches after updates
-                uri: readUri.href,
-                mimeType: RESOURCE_MIME_TYPE,
-                text: content,
-                _meta: readMeta,
+                type: 'text' as const,
+                text: `Rendered ${tool.description}!`,
               },
             ],
+            structuredContent:
+              (toolResult?.structuredContent as Record<string, unknown>) ?? undefined,
           };
         }
       );
-      resourceHandles.set(resourceName, handle);
+      toolHandles.push({ handle: toolHandle, resourceName, toolMeta: fullToolMeta });
+    } else if (!registeredToolNames.has(tool.name as string)) {
+      registeredToolNames.add(tool.name as string);
+      // ── Plain tool (no UI): register directly via mcpServer ──
+      // Use the real handler if available (loaded via Vite SSR in dev mode),
+      // otherwise fall back to mock response from simulation data.
+      //
+      // Use a passthrough Zod schema so the MCP SDK passes args to the handler.
+      // We can't use the tool's own Zod schema because it's loaded via Vite SSR
+      // from a different Zod module instance, causing isZodSchemaInstance checks
+      // to fail. A passthrough schema from the same Zod instance as the SDK
+      // accepts any arguments and forwards them to the handler.
+      const realHandler = simulation.handler;
+      console.log(`[MCP] RegisterTool (no UI): ${tool.name}${realHandler ? '' : ' (mock)'}`);
+
+      mcpServer.registerTool(
+        tool.name as string,
+        {
+          description: tool.description as string | undefined,
+          // Use passthrough so the SDK passes all args to the handler without stripping.
+          // We can't use the tool's own Zod schema because it's loaded via Vite SSR
+          // from a different Zod module instance, causing isZodSchemaInstance checks to fail.
+          inputSchema: z.object({}).passthrough(),
+          annotations: tool.annotations as Record<string, unknown> | undefined,
+          _meta: toolMeta,
+        },
+        async (args, extra) => {
+          const argKeys = Object.keys(args);
+          const argsStr = argKeys.length > 0 ? `{${argKeys.join(', ')}}` : '{}';
+          console.log(`[MCP] CallTool: ${tool.name}${argsStr}`);
+
+          if (realHandler) {
+            try {
+              const result = await realHandler(args, extra);
+              if (typeof result === 'string') {
+                return { content: [{ type: 'text' as const, text: result }] };
+              }
+              return result as { content: { type: 'text'; text: string }[] };
+            } catch (error) {
+              console.error(`[MCP] Handler error for ${tool.name}:`, error);
+              return {
+                isError: true,
+                content: [
+                  {
+                    type: 'text' as const,
+                    text: `Error: ${error instanceof Error ? error.message : String(error)}`,
+                  },
+                ],
+              };
+            }
+          }
+
+          // Fallback: mock response from simulation data
+          return {
+            content: [
+              {
+                type: 'text' as const,
+                text: `Called ${tool.description}!`,
+              },
+            ],
+            structuredContent:
+              (toolResult?.structuredContent as Record<string, unknown>) ?? undefined,
+          };
+        }
+      );
     }
-
-    // Register the tool using ext-apps helper (normalizes ui/resourceUri metadata).
-    // Capture the returned RegisteredTool handle for metadata updates on rebuild.
-    // Note: inputSchema from simulation is JSON Schema, not Zod, so we omit it here
-    // (simulation mode doesn't validate inputs - just logs what was called)
-    const fullToolMeta = {
-      ...toolMeta,
-      ui: {
-        resourceUri: uri,
-        // Preserve tool visibility from simulation metadata if declared
-        ...((toolMeta.ui as Record<string, unknown>)?.visibility
-          ? { visibility: (toolMeta.ui as Record<string, unknown>).visibility }
-          : {}),
-      },
-    };
-    const toolHandle = registerAppTool(
-      mcpServer,
-      tool.name as string,
-      {
-        description: tool.description as string | undefined,
-        _meta: fullToolMeta,
-      },
-      async (extra) => {
-        // Access arguments from request context (no inputSchema = no parsed args)
-        const args =
-          (extra as { request?: { params?: { arguments?: Record<string, unknown> } } }).request
-            ?.params?.arguments ?? {};
-        const argKeys = Object.keys(args);
-        const argsStr = argKeys.length > 0 ? `{${argKeys.join(', ')}}` : '{}';
-        const hasStructuredContent = toolResult?.structuredContent != null;
-
-        console.log(
-          `[MCP] CallTool: ${tool.name}${argsStr} → ${hasStructuredContent ? 'structured' : 'text'}`
-        );
-
-        return {
-          content: [
-            {
-              type: 'text' as const,
-              text: `Rendered ${tool.description}!`,
-            },
-          ],
-          structuredContent:
-            (toolResult?.structuredContent as Record<string, unknown>) ?? undefined,
-        };
-      }
-    );
-    toolHandles.push({ handle: toolHandle, resourceName, toolMeta: fullToolMeta });
   }
 
-  const registeredUris = Array.from(registeredUriSet).join(', ');
+  const registeredUris = Array.from(registeredUriSet);
+  const uiToolCount = simulations.filter((s) => s.resource).length;
+  const plainToolCount = simulations.length - uiToolCount;
+  const uriStr = registeredUris.length > 0 ? `: ${registeredUris.join(', ')}` : '';
   console.log(
-    `[MCP] Registered ${simulations.length} tool(s) and resource(s)${viteMode ? ' (vite mode)' : ''}: ${registeredUris}`
+    `[MCP] Registered ${simulations.length} tool(s) (${uiToolCount} UI, ${plainToolCount} plain) and ${registeredUris.length} resource(s)${viteMode ? ' (vite mode)' : ''}${uriStr}`
   );
 
   return { server: mcpServer, resourceHandles, toolHandles };
@@ -447,6 +520,12 @@ async function handleMcpRequest(
     });
 
     transport.onerror = (error: Error) => {
+      // Claude's client probes with an Accept header that doesn't include text/event-stream,
+      // then retries correctly. Downgrade this expected negotiation error to a warning.
+      if (error.message?.includes('Not Acceptable')) {
+        console.warn(`[MCP] Accept header negotiation (expected with some clients)`);
+        return;
+      }
       const id = transport.sessionId;
       console.error(`[MCP] Transport error${id ? ` (${id.substring(0, 8)}...)` : ''}:`, error);
     };

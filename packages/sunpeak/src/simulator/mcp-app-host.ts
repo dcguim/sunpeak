@@ -348,6 +348,15 @@ export class McpAppHost {
     }
   }
 
+  /**
+   * Update mutable options (callbacks) after construction.
+   * Allows the simulator to swap handlers (e.g. onCallTool) without
+   * recreating the host and tearing down the iframe connection.
+   */
+  updateOptions(partial: Partial<McpAppHostOptions>): void {
+    Object.assign(this.options, partial);
+  }
+
   get initialized(): boolean {
     return this._initialized;
   }

@@ -73,8 +73,7 @@ export async function extractToolExport(
   }
   if (!tool) {
     throw new Error(
-      `No "tool" export found in ${tsPath}. ` +
-        `Add: export const tool: AppToolConfig = { resource, ... };`
+      `No "tool" export found in ${tsPath}. ` + `Add: export const tool: AppToolConfig = { ... };`
     );
   }
 

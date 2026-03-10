@@ -56,7 +56,7 @@ Using a Review page as an example, sunpeak projects look like:
 5. **[UI Components](/template/ui-components)**: Production-ready components following MCP App design guidelines.
 6. **Convention over configuration**:
    - Create a UI by creating a `.tsx` file in `src/resources/{name}/` that exports a `ResourceConfig` and a React component ([example](#resource)).
-   - Create a tool by creating a `.ts` file in `src/tools/` that exports `tool` (metadata with resource reference), `schema` (Zod), and a `default` handler ([example](#tool)).
+   - Create a tool by creating a `.ts` file in `src/tools/` that exports `tool` (metadata with optional resource link), `schema` (Zod), and a `default` handler ([example](#tool)). Tools without a `resource` field are registered as plain MCP tools (no UI).
    - Create test state (simulations) by creating a `.json` file in `tests/simulations/` ([example](#simulation)).
 
 ### The sunpeak CLI

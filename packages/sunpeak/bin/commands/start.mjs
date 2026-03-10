@@ -102,12 +102,9 @@ export async function start(projectRoot = process.cwd(), args = []) {
     });
   }
 
-  if (resources.length === 0) {
-    console.error('Error: No built resources found in dist/. Run `sunpeak build` first.');
-    process.exit(1);
+  if (resources.length > 0) {
+    console.log(`Found ${resources.length} resource(s): ${resources.map(r => r.name).join(', ')}`);
   }
-
-  console.log(`Found ${resources.length} resource(s): ${resources.map(r => r.name).join(', ')}`);
 
   // ========================================================================
   // Load compiled tool modules
@@ -146,12 +143,14 @@ export async function start(projectRoot = process.cwd(), args = []) {
     }
   }
 
-  if (tools.length === 0) {
-    console.error('Error: No compiled tools found in dist/tools/. Run `sunpeak build` first.');
+  if (tools.length === 0 && resources.length === 0) {
+    console.error('Error: No compiled tools or resources found in dist/. Run `sunpeak build` first.');
     process.exit(1);
   }
 
-  console.log(`Found ${tools.length} tool(s): ${tools.map(t => t.name).join(', ')}`);
+  if (tools.length > 0) {
+    console.log(`Found ${tools.length} tool(s): ${tools.map(t => t.name).join(', ')}`);
+  }
 
   // ========================================================================
   // Load server entry (optional)

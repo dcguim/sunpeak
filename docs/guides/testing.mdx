@@ -90,6 +90,67 @@ test('should render in fullscreen mode', async ({ page }) => {
 
 The `createSimulatorUrl` function accepts parameters for configuring host, theme, display mode, device type, safe area insets, and more. See the [Simulator API Reference](/api-reference/simulations/simulator#createsimulatorurl) for the complete list.
 
+### Testing Backend-Only Tools
+
+If your resource calls backend tools via `useCallServerTool`, define mock responses using the `serverTools` field in the simulation JSON. The simulator resolves these mocks based on the tool call arguments:
+
+```json
+// tests/simulations/review-purchase.json
+{
+  "tool": "review-purchase",
+  "toolResult": { "structuredContent": { "..." } },
+  "serverTools": {
+    "review": [
+      {
+        "when": { "confirmed": true },
+        "result": {
+          "content": [{ "type": "text", "text": "Completed." }],
+          "structuredContent": { "status": "success", "message": "Completed." }
+        }
+      },
+      {
+        "when": { "confirmed": false },
+        "result": {
+          "content": [{ "type": "text", "text": "Cancelled." }],
+          "structuredContent": { "status": "cancelled", "message": "Cancelled." }
+        }
+      }
+    ]
+  }
+}
+```
+
+```typescript
+import { test, expect } from '@playwright/test';
+import { createSimulatorUrl } from 'sunpeak/simulator';
+
+test('should show success when server confirms', async ({ page }) => {
+  await page.goto(createSimulatorUrl({
+    simulation: 'review-purchase',
+  }));
+
+  const iframe = page.frameLocator('iframe');
+  await iframe.locator('button:has-text("Place Order")').click();
+
+  // The serverTools mock matches { confirmed: true } and returns success
+  await expect(iframe.locator('text=Completed.')).toBeVisible();
+});
+
+test('should show cancel when user rejects', async ({ page }) => {
+  await page.goto(createSimulatorUrl({
+    simulation: 'review-purchase',
+  }));
+
+  const iframe = page.frameLocator('iframe');
+  await iframe.locator('button:has-text("Cancel")').click();
+
+  // The serverTools mock matches { confirmed: false } and returns cancelled
+  await expect(iframe.locator('text=Cancelled.')).toBeVisible();
+});
+```
+
+The `serverTools` field supports both simple (single result) and conditional (`when`/`result` array) forms. See [Simulation API Reference](/api-reference/simulations/simulation#mocking-server-tool-calls) for details.
+
 ### Example E2E Test Structure
 
 A typical e2e test file tests a resource across different modes:

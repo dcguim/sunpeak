@@ -4,8 +4,19 @@
  * the dev simulator and MCP server contexts.
  */
 
-import type { Tool, Resource } from '@modelcontextprotocol/sdk/types.js';
+import type { Tool, Resource, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import type { McpUiHostContext } from '@modelcontextprotocol/ext-apps';
+
+/**
+ * Mock response for a server tool call within a simulation.
+ *
+ * Simple form: a single `CallToolResult` always returned.
+ * Conditional form: an array of `{ when, result }` entries — the first
+ * entry whose `when` keys shallow-match the call arguments wins.
+ */
+export type ServerToolMock =
+  | CallToolResult
+  | Array<{ when: Record<string, unknown>; result: CallToolResult }>;
 
 /**
  * A simulation packages a component with its example data and metadata.
@@ -32,7 +43,8 @@ export interface Simulation {
   tool: Tool;
 
   // Official Resource type from the MCP SDK, used in ListResources response.
-  resource: Resource;
+  // Undefined for tools without a UI.
+  resource?: Resource;
 
   // Tool input arguments (the arguments object sent to CallTool).
   toolInput?: Record<string, unknown>;
@@ -46,4 +58,34 @@ export interface Simulation {
 
   // Initial host context overrides for the simulation.
   hostContext?: Partial<McpUiHostContext>;
+
+  /**
+   * Mock responses for `callServerTool` calls made by the resource.
+   * Keys are tool names; values are either a single result or an array
+   * of conditional `{ when, result }` entries for argument-based matching.
+   */
+  serverTools?: Record<string, ServerToolMock>;
+}
+
+/**
+ * Resolve a `ServerToolMock` to a concrete `CallToolResult` given the call arguments.
+ *
+ * - Simple form (single result): returns it directly.
+ * - Conditional form (array of `{ when, result }`): returns the first entry
+ *   whose `when` keys all shallow-equal the corresponding values in `args`.
+ *   Falls back to `undefined` if no condition matches.
+ */
+export function resolveServerToolResult(
+  mock: ServerToolMock,
+  args: Record<string, unknown> | undefined
+): CallToolResult | undefined {
+  if (!Array.isArray(mock)) return mock;
+
+  for (const entry of mock) {
+    const matches = Object.entries(entry.when).every(
+      ([key, value]) => args != null && args[key] === value
+    );
+    if (matches) return entry.result;
+  }
+  return undefined;
 }

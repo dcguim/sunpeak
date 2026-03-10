@@ -234,8 +234,8 @@ export interface BuildDevSimulationsOptions {
  */
 interface ToolModuleInfo {
   tool: Record<string, unknown>;
-  /** Resource name string from tool.resource */
-  resourceName: string;
+  /** Resource name string from tool.resource (undefined for tools without UI) */
+  resourceName?: string;
 }
 
 /**
@@ -272,9 +272,7 @@ export function buildDevSimulations(
       const mod = module as { tool?: Record<string, unknown> };
       if (mod.tool) {
         const resourceName = mod.tool.resource as string | undefined;
-        if (resourceName) {
-          toolsMap.set(nameMatch[1], { tool: mod.tool, resourceName });
-        }
+        toolsMap.set(nameMatch[1], { tool: mod.tool, resourceName });
       }
     }
   }
@@ -298,10 +296,15 @@ export function buildDevSimulations(
       continue;
     }
 
-    // Look up resource metadata by name
-    const resourceMeta = resourceMetaByName.get(toolInfo.resourceName);
-    const resourceKey = resourceKeyByName.get(toolInfo.resourceName);
-    if (!resourceMeta || !resourceKey) {
+    // Look up resource metadata by name (if tool has a UI)
+    const resourceMeta = toolInfo.resourceName
+      ? resourceMetaByName.get(toolInfo.resourceName)
+      : undefined;
+    const resourceKey = toolInfo.resourceName
+      ? resourceKeyByName.get(toolInfo.resourceName)
+      : undefined;
+
+    if (toolInfo.resourceName && (!resourceMeta || !resourceKey)) {
       console.warn(
         `Resource "${toolInfo.resourceName}" not found for tool "${toolName}". ` +
           `Make sure a resource with name "${toolInfo.resourceName}" exists in src/resources/.`
@@ -309,12 +312,32 @@ export function buildDevSimulations(
       continue;
     }
 
-    const componentName = getComponentName(resourceKey);
-    const resourceComponent = resourceComponents[componentName];
+    // Build resource block only for UI tools
+    let resourceBlock: Pick<Simulation, 'resource' | 'resourceUrl'> = {};
+    if (resourceKey && resourceMeta) {
+      const componentName = getComponentName(resourceKey);
+      const resourceComponent = resourceComponents[componentName];
 
-    if (!resourceComponent) {
-      console.warn(`Resource component "${componentName}" not found for tool "${toolName}".`);
-      continue;
+      if (!resourceComponent) {
+        console.warn(`Resource component "${componentName}" not found for tool "${toolName}".`);
+        continue;
+      }
+
+      resourceBlock = {
+        resource: {
+          uri: `ui://${resourceKey}`,
+          name: resourceKey,
+          ...(resourceMeta.title != null ? { title: resourceMeta.title as string } : {}),
+          ...(resourceMeta.description != null
+            ? { description: resourceMeta.description as string }
+            : {}),
+          ...(resourceMeta.mimeType != null ? { mimeType: resourceMeta.mimeType as string } : {}),
+          ...(resourceMeta._meta != null
+            ? { _meta: resourceMeta._meta as Record<string, unknown> }
+            : {}),
+        },
+        resourceUrl: `/.sunpeak/resource-loader.html?component=${componentName}`,
+      };
     }
 
     simulations[simKey] = {
@@ -332,21 +355,10 @@ export function buildDevSimulations(
           ? { _meta: toolInfo.tool._meta as Record<string, unknown> }
           : {}),
       },
-      resource: {
-        uri: `ui://${resourceKey}`,
-        name: resourceKey,
-        ...(resourceMeta.title != null ? { title: resourceMeta.title as string } : {}),
-        ...(resourceMeta.description != null
-          ? { description: resourceMeta.description as string }
-          : {}),
-        ...(resourceMeta.mimeType != null ? { mimeType: resourceMeta.mimeType as string } : {}),
-        ...(resourceMeta._meta != null
-          ? { _meta: resourceMeta._meta as Record<string, unknown> }
-          : {}),
-      },
+      ...resourceBlock,
       toolInput: simulationData.toolInput as Record<string, unknown> | undefined,
       toolResult: simulationData.toolResult as Simulation['toolResult'],
-      resourceUrl: `/.sunpeak/resource-loader.html?component=${componentName}`,
+      serverTools: simulationData.serverTools as Simulation['serverTools'],
     };
   }
 

@@ -32,7 +32,8 @@ export { ChatGPTSimulator } from './chatgpt-simulator';
 export { Simulator } from '../simulator/simulator';
 
 // Simulator types
-export type { Simulation } from '../types/simulation';
+export type { Simulation, ServerToolMock } from '../types/simulation';
+export { resolveServerToolResult } from '../types/simulation';
 export type { ScreenWidth, SimulatorConfig } from '../simulator/simulator-types';
 export { SCREEN_WIDTHS } from '../simulator/simulator-types';
 

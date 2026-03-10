@@ -38,6 +38,10 @@ export { IframeResource, extractResourceCSP } from './iframe-resource';
 export type { ResourceCSP } from './iframe-resource';
 export { ThemeProvider, useThemeContext } from './theme-provider';
 
+// Simulation types & resolution
+export type { Simulation, ServerToolMock } from '../types/simulation';
+export { resolveServerToolResult } from '../types/simulation';
+
 // Types & URL helpers
 export type { ScreenWidth, SimulatorConfig } from './simulator-types';
 export { SCREEN_WIDTHS } from './simulator-types';

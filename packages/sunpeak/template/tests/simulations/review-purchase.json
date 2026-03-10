@@ -71,16 +71,37 @@
       ],
       "acceptLabel": "Place Order",
       "rejectLabel": "Cancel",
-      "acceptedMessage": "Order placed!",
-      "rejectedMessage": "Order cancelled",
+      "acceptedMessage": "Placing order...",
+      "rejectedMessage": "Cancelling order...",
       "reviewTool": {
-        "name": "complete_purchase",
+        "name": "review",
         "arguments": {
-          "orderId": "order_123",
-          "items": ["1", "2", "3"],
-          "total": 127.65
+          "action": "place_order",
+          "payload": {
+            "orderId": "order_123",
+            "items": ["1", "2", "3"],
+            "total": 127.65
+          }
         }
       }
     }
+  },
+  "serverTools": {
+    "review": [
+      {
+        "when": { "confirmed": true },
+        "result": {
+          "content": [{ "type": "text", "text": "Completed." }],
+          "structuredContent": { "status": "success", "message": "Completed." }
+        }
+      },
+      {
+        "when": { "confirmed": false },
+        "result": {
+          "content": [{ "type": "text", "text": "Cancelled." }],
+          "structuredContent": { "status": "cancelled", "message": "Cancelled." }
+        }
+      }
+    ]
   }
 }

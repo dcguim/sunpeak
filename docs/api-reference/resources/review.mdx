@@ -169,7 +169,7 @@ interface ReviewState {
 }
 ```
 
-Once a decision is made, the UI updates to show the result with a timestamp.
+Once a decision is made, the UI calls the backend tool via `useCallServerTool` and reads `structuredContent` from the response. The `status` field (`'success'`, `'cancelled'`, or `'error'`) determines the result color (green or red), and `message` is displayed as the result text.
 
 ## Features
 

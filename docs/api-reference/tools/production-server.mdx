@@ -67,7 +67,7 @@ app.listen(3000);
 </ResponseField>
 
 <ResponseField name="tools" type="ProductionTool[]" required>
-  Tool registrations. Each has a `name`, `tool` config (resource reference, title, description), optional `schema` (Zod shape for input validation), and `handler` function.
+  Tool registrations. Each has a `name`, `tool` config (optional resource link, title, description), optional `schema` (Zod shape for input validation), and `handler` function. Tools without a `resource` are registered as plain MCP tools (no UI).
 </ResponseField>
 
 <ResponseField name="resources" type="ProductionResource[]" required>

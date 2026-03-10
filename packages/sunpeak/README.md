@@ -62,14 +62,16 @@ my-app/
 ├── src/
 │   ├── resources/
 │   │   └── review/
-│   │       └── review.tsx   # Review UI component + resource metadata.
+│   │       └── review.tsx            # Review UI component + resource metadata.
 │   ├── tools/
-│   │   ├── review-diff.ts   # Tool with handler, schema, and resource reference.
-│   │   └── review-post.ts   # Multiple tools can share one resource.
-│   └── server.ts            # Optional: auth, server config.
+│   │   ├── review-diff.ts            # Tool with handler, schema, and optional resource link.
+│   │   ├── review-post.ts            # Multiple tools can share one resource.
+│   │   └── review.ts                 # Backend-only tool (no resource, no UI).
+│   └── server.ts                     # Optional: auth, server config.
 ├── tests/simulations/
-│   ├── review-diff.json     # Mock state for testing.
-│   └── review-post.json     # Mock state for testing.
+│   ├── review-diff.json              # Mock state for testing (includes serverTools).
+│   ├── review-post.json              # Mock state for testing (includes serverTools).
+│   └── review-purchase.json          # Mock state for testing (includes serverTools).
 └── package.json
 ```
 
@@ -77,7 +79,7 @@ my-app/
 2. UI components: Production-ready components following MCP App design guidelines.
 3. Convention over configuration:
    1. Create a UI by creating a `.tsx` file in `src/resources/{name}/` that exports a `ResourceConfig` and a React component ([example below](#resource-component)).
-   2. Create a tool by creating a `.ts` file in `src/tools/` that exports `tool` (metadata with resource reference), `schema` (Zod), and a `default` handler ([example below](#tool-file)).
+   2. Create a tool by creating a `.ts` file in `src/tools/` that exports `tool` (metadata with optional resource link), `schema` (Zod), and a `default` handler ([example below](#tool-file)). Tools without a `resource` field are registered as plain MCP tools (no UI).
    3. Create test state (`Simulation`s) by creating a `.json` file in `tests/simulations/` ([example below](#simulation)).
 
 ### The `sunpeak` CLI
@@ -118,7 +120,7 @@ export function ReviewResource() {
 
 ### Tool File
 
-Each tool `.ts` file exports metadata (with a direct resource reference), a Zod schema, and a handler:
+Each tool `.ts` file exports metadata (with an optional resource link for UI tools), a Zod schema, and a handler:
 
 ```ts
 // src/tools/review-diff.ts

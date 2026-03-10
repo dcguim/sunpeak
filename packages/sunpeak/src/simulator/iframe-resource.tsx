@@ -504,6 +504,14 @@ export function IframeResource({
     setLoaded(true);
   }, [src, injectOpenAIRuntime, hostContext?.theme, hostContext?.styles]);
 
+  // Sync mutable host options (e.g. onCallTool) into the existing host
+  // instance when they change, without recreating the connection.
+  useEffect(() => {
+    if (hostOptions) {
+      host.updateOptions(hostOptions);
+    }
+  }, [host, hostOptions]);
+
   // Update host context when props change.
   // McpAppHost.setHostContext() internally detects display mode changes
   // and waits for the iframe to commit its DOM before firing onDisplayModeReady.

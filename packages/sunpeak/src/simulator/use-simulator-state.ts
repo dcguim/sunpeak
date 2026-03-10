@@ -215,13 +215,18 @@ export function useSimulatorState({
   simulations,
   defaultHost = 'chatgpt',
 }: UseSimulatorStateOptions): SimulatorState {
-  const simulationNames = Object.keys(simulations).sort((a, b) => {
-    const simA = simulations[a];
-    const simB = simulations[b];
-    const labelA = `${(simA.resource.title as string) || simA.resource.name}: ${(simA.tool.title as string) || simA.tool.name}`;
-    const labelB = `${(simB.resource.title as string) || simB.resource.name}: ${(simB.tool.title as string) || simB.tool.name}`;
-    return labelA.localeCompare(labelB);
-  });
+  // Only list simulations with a UI resource — backend-only tools have nothing to render.
+  const simulationNames = Object.keys(simulations)
+    .filter((name) => simulations[name].resource)
+    .sort((a, b) => {
+      const simA = simulations[a];
+      const simB = simulations[b];
+      const resourceLabelA = (simA.resource!.title as string) || simA.resource!.name;
+      const resourceLabelB = (simB.resource!.title as string) || simB.resource!.name;
+      const labelA = `${resourceLabelA}: ${(simA.tool.title as string) || simA.tool.name}`;
+      const labelB = `${resourceLabelB}: ${(simB.tool.title as string) || simB.tool.name}`;
+      return labelA.localeCompare(labelB);
+    });
   const urlParams = useMemo(() => parseUrlParams(), []);
   const [screenWidth, setScreenWidth] = useState<ScreenWidth>('full');
 
@@ -420,8 +425,8 @@ export function useSimulatorState({
 
   const resourceUrl = selectedSim?.resourceUrl;
   const resourceScript = selectedSim?.resourceScript;
-  const csp = selectedSim ? extractResourceCSP(selectedSim.resource) : undefined;
-  const resourceMeta = (selectedSim?.resource._meta as Record<string, unknown> | undefined)?.ui as
+  const csp = selectedSim?.resource ? extractResourceCSP(selectedSim.resource) : undefined;
+  const resourceMeta = (selectedSim?.resource?._meta as Record<string, unknown> | undefined)?.ui as
     | { permissions?: McpUiResourcePermissions; prefersBorder?: boolean; domain?: string }
     | undefined;
   const permissions = resourceMeta?.permissions;

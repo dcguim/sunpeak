@@ -115,14 +115,14 @@ export function WeatherResource() {
 
 ## Tool Files
 
-Each tool `.ts` file exports metadata (with a resource name string), a Zod schema, and a handler:
+Each tool `.ts` file exports metadata, a Zod schema, and a handler. The `resource` field links a tool to its UI — omit it for data-only tools:
 
 ```ts
 // src/tools/show-weather.ts
 import { z } from 'zod';
 import type { AppToolConfig, ToolHandlerExtra } from 'sunpeak/mcp';
 
-// 1. Tool metadata with resource name (matches directory: src/resources/weather/)
+// 1. Tool metadata (resource links to src/resources/weather/ — omit for tools without a UI)
 export const tool: AppToolConfig = {
   resource: 'weather',
   title: 'Show Weather',
@@ -148,6 +148,47 @@ export default async function (args: { city: string; units?: string }, extra: To
   };
 }
 ```
+
+### Backend-Only Tools (Confirmation Loop)
+
+A common pattern pairs a UI tool (for review) with a backend-only tool (for execution). The UI tool's `structuredContent` includes a `reviewTool` field. The resource component reads it and calls the backend tool via `useCallServerTool` when the user confirms:
+
+```ts
+// src/tools/review.ts — no resource field, shared by all review variants
+import { z } from 'zod';
+import type { AppToolConfig, ToolHandlerExtra } from 'sunpeak/mcp';
+
+export const tool: AppToolConfig = {
+  title: 'Confirm Review',
+  description: 'Execute or cancel a reviewed action after user approval',
+  annotations: { readOnlyHint: false },
+  _meta: { ui: { visibility: ['model', 'app'] } },
+};
+
+export const schema = {
+  action: z.string().describe('Action identifier (e.g., "place_order", "apply_changes")'),
+  confirmed: z.boolean().describe('Whether the user confirmed'),
+  decidedAt: z.string().describe('ISO timestamp of decision'),
+  payload: z.record(z.unknown()).optional().describe('Domain-specific data'),
+};
+
+type Args = z.infer<z.ZodObject<typeof schema>>;
+
+export default async function (args: Args, _extra: ToolHandlerExtra) {
+  if (!args.confirmed) {
+    return {
+      content: [{ type: 'text' as const, text: 'Cancelled.' }],
+      structuredContent: { status: 'cancelled', message: 'Cancelled.' },
+    };
+  }
+  return {
+    content: [{ type: 'text' as const, text: 'Completed.' }],
+    structuredContent: { status: 'success', message: 'Completed.' },
+  };
+}
+```
+
+The UI tool returns `reviewTool` in its response, and the resource calls `useCallServerTool` on accept/reject. The tool returns both `content` (human-readable text for the host model) and `structuredContent` (with `status` and `message` for the UI). The resource reads `structuredContent.status` to determine success/error styling and displays `structuredContent.message`. One `review` tool handles all review variants (purchases, diffs, posts) via the `action` field. The simulator returns mock simulation data for `callServerTool` calls, matching real host behavior. See the template's `review` resource for the full implementation.
 
 ## Simulation Files
 
@@ -177,6 +218,21 @@ Key fields:
 - `toolInput` — Arguments sent to the tool (shown as input to `useToolData`)
 - `toolResult.structuredContent` — The data rendered by `useToolData().output`
 - `toolResult.content[]` — Text fallback for non-UI hosts
+- `serverTools` — Mock responses for `callServerTool` calls. Keys are tool names. Values are either a single `CallToolResult` (always returned) or an array of `{ when, result }` entries for conditional matching against call arguments.
+
+Example with `serverTools` (for resources that call backend-only tools):
+```json
+{
+  "tool": "review-purchase",
+  "toolResult": { "structuredContent": { "..." } },
+  "serverTools": {
+    "review": [
+      { "when": { "confirmed": true }, "result": { "content": [{ "type": "text", "text": "Completed." }], "structuredContent": { "status": "success", "message": "Completed." } } },
+      { "when": { "confirmed": false }, "result": { "content": [{ "type": "text", "text": "Cancelled." }], "structuredContent": { "status": "cancelled", "message": "Cancelled." } } }
+    ]
+  }
+}
+```
 
 Multiple simulations per tool are supported: `review-diff.json`, `review-post.json` sharing the same resource via the same tool's `resource` field.
 

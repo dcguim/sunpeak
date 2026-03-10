@@ -35,15 +35,36 @@
       ],
       "acceptLabel": "Publish",
       "rejectLabel": "Cancel",
-      "acceptedMessage": "Post published!",
-      "rejectedMessage": "Post cancelled",
+      "acceptedMessage": "Publishing post...",
+      "rejectedMessage": "Cancelling post...",
       "reviewTool": {
-        "name": "publish_post",
+        "name": "review",
         "arguments": {
-          "postId": "draft_456",
-          "platforms": ["x", "linkedin"]
+          "action": "publish",
+          "payload": {
+            "postId": "draft_456",
+            "platforms": ["x", "linkedin"]
+          }
         }
       }
     }
+  },
+  "serverTools": {
+    "review": [
+      {
+        "when": { "confirmed": true },
+        "result": {
+          "content": [{ "type": "text", "text": "Completed." }],
+          "structuredContent": { "status": "success", "message": "Completed." }
+        }
+      },
+      {
+        "when": { "confirmed": false },
+        "result": {
+          "content": [{ "type": "text", "text": "Cancelled." }],
+          "structuredContent": { "status": "cancelled", "message": "Cancelled." }
+        }
+      }
+    ]
   }
 }

@@ -4,6 +4,7 @@ import type {
   McpUiTheme,
   McpUiHostContext,
 } from '@modelcontextprotocol/ext-apps';
+import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { useSimulatorState } from './use-simulator-state';
 import { IframeResource } from './iframe-resource';
 import { ThemeProvider } from './theme-provider';
@@ -18,6 +19,7 @@ import {
   SidebarToggle,
 } from './simple-sidebar';
 import { getHostShell, getRegisteredHosts, type HostId } from './hosts';
+import { resolveServerToolResult } from '../types/simulation';
 import type { Simulation } from '../types/simulation';
 import type { ScreenWidth } from './simulator-types';
 
@@ -99,6 +101,28 @@ export function Simulator({
     }
   }, [activeShell]);
 
+  // Handle callServerTool from the iframe by resolving mock responses from the
+  // current simulation's `serverTools` map. Supports both simple (single result)
+  // and conditional (`when` / `result` array) forms.
+  const handleCallTool = React.useCallback(
+    (params: { name: string; arguments?: Record<string, unknown> }): CallToolResult => {
+      const mock = state.selectedSim?.serverTools?.[params.name];
+      if (mock) {
+        const result = resolveServerToolResult(mock, params.arguments);
+        if (result) return result;
+      }
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `[Simulator] Tool "${params.name}" called — no serverTools mock found in simulation "${state.selectedSimulationName}".`,
+          },
+        ],
+      };
+    },
+    [state.selectedSim, state.selectedSimulationName]
+  );
+
   // Build content.
   // The wrapper div stays mounted across key changes, providing a themed
   // background while the iframe (opacity: 0) loads new content.
@@ -119,6 +143,7 @@ export function Simulator({
             hostCapabilities: activeShell?.hostCapabilities,
             onDisplayModeChange: state.handleDisplayModeChange,
             onUpdateModelContext: state.handleUpdateModelContext,
+            onCallTool: handleCallTool,
           }}
           permissions={state.permissions}
           prefersBorder={state.prefersBorder}
@@ -145,6 +170,7 @@ export function Simulator({
             hostCapabilities: activeShell?.hostCapabilities,
             onDisplayModeChange: state.handleDisplayModeChange,
             onUpdateModelContext: state.handleUpdateModelContext,
+            onCallTool: handleCallTool,
           }}
           permissions={state.permissions}
           prefersBorder={state.prefersBorder}
@@ -189,12 +215,13 @@ export function Simulator({
                   onChange={(value) => state.setSelectedSimulationName(value)}
                   options={state.simulationNames.map((name) => {
                     const sim = simulations[name];
-                    const resourceTitle =
-                      (sim.resource.title as string | undefined) || sim.resource.name;
+                    const resourceTitle = sim.resource
+                      ? (sim.resource.title as string | undefined) || sim.resource.name
+                      : undefined;
                     const toolTitle = (sim.tool.title as string | undefined) || sim.tool.name;
                     return {
                       value: name,
-                      label: `${resourceTitle}: ${toolTitle}`,
+                      label: resourceTitle ? `${resourceTitle}: ${toolTitle}` : toolTitle,
                     };
                   })}
                 />

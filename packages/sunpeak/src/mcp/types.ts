@@ -6,6 +6,7 @@ import type {
 } from '@modelcontextprotocol/sdk/types.js';
 import type { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
 import type { ToolConfig } from '@modelcontextprotocol/ext-apps/server';
+import type { ServerToolMock } from '../types/simulation';
 
 export type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 export type { AuthInfo } from '@modelcontextprotocol/sdk/server/auth/types.js';
@@ -27,8 +28,8 @@ export type ToolHandlerExtra = RequestHandlerExtra<ServerRequest, ServerNotifica
  * the tool to a resource by its unique name string.
  */
 export interface AppToolConfig extends ToolConfig {
-  /** The resource name (must match a directory in `src/resources/`, e.g. `'albums'`). */
-  resource: string;
+  /** The resource name (must match a directory in `src/resources/`, e.g. `'albums'`). Omit for tools without a UI. */
+  resource?: string;
 }
 
 /**
@@ -39,8 +40,8 @@ export interface SimulationWithDist {
   // Unique identifier derived from the simulation filename (e.g., 'show-albums')
   name: string;
 
-  // Path to the built HTML file (for production mode)
-  distPath: string;
+  // Path to the built HTML file (for production mode). Undefined for tools without a UI.
+  distPath?: string;
 
   // Path to the source TSX file (for Vite dev mode)
   srcPath?: string;
@@ -49,8 +50,8 @@ export interface SimulationWithDist {
   tool: Tool;
 
   // MCP Resource protocol - official Resource type from MCP SDK used in ListResources response
-  // MCP Resource metadata (name, uri, description, _meta).
-  resource: Resource;
+  // MCP Resource metadata (name, uri, description, _meta). Undefined for tools without a UI.
+  resource?: Resource;
 
   // Tool result data for CallTool response
   toolResult?: {
@@ -58,6 +59,14 @@ export interface SimulationWithDist {
     structuredContent?: unknown;
     isError?: boolean;
   };
+
+  // Real handler for backend-only tools (loaded via Vite SSR in dev mode).
+  // When present, the dev MCP server calls this instead of returning mock data.
+  handler?: (args: Record<string, unknown>, extra: unknown) => unknown | Promise<unknown>;
+
+  // Mock responses for callServerTool calls made by the resource.
+  // Passed through from simulation JSON.
+  serverTools?: Record<string, ServerToolMock>;
 }
 
 /**

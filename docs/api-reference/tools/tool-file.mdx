@@ -28,9 +28,9 @@ Each tool file exports three things:
 import { z } from 'zod';
 import type { AppToolConfig, ToolHandlerExtra } from 'sunpeak/mcp';
 
-// 1. Tool metadata with resource name
+// 1. Tool metadata (with optional resource name for UI tools)
 export const tool: AppToolConfig = {
-  resource: 'albums',
+  resource: 'albums',           // Links to src/resources/albums/ — omit for tools without a UI
   title: 'Show Albums',
   description: 'Show photo albums',
   annotations: { readOnlyHint: true },
@@ -56,8 +56,8 @@ export default async function (args: Args, extra: ToolHandlerExtra) {
 
 ### `tool` (AppToolConfig)
 
-<ResponseField name="resource" type="string" required>
-  The resource name, matching a directory in `src/resources/` (e.g., `'albums'` for `src/resources/albums/`). Links this tool to its UI.
+<ResponseField name="resource" type="string">
+  The resource name, matching a directory in `src/resources/` (e.g., `'albums'` for `src/resources/albums/`). Links this tool to its UI. Omit for tools that return data only (no UI).
 </ResponseField>
 
 <ResponseField name="title" type="string">
@@ -141,6 +141,71 @@ The `extra` parameter provides context from the MCP SDK:
 <ResponseField name="signal" type="AbortSignal">
   Abort signal for cancellation.
 </ResponseField>
+
+## Tools Without UI
+
+Tools that don't need a UI can omit the `resource` field. These are registered as plain MCP tools (no resource or iframe).
+
+A common pattern is pairing a UI tool (for review) with a backend-only tool (for execution). The review UI calls the backend tool via [`useCallServerTool`](/api-reference/hooks/use-call-server-tool) after the user confirms:
+
+```ts
+// src/tools/review.ts — backend-only, no resource
+
+import { z } from 'zod';
+import type { AppToolConfig, ToolHandlerExtra } from 'sunpeak/mcp';
+
+export const tool: AppToolConfig = {
+  title: 'Confirm Review',
+  description: 'Execute or cancel a reviewed action after user approval in the review UI',
+  annotations: { readOnlyHint: false },
+  _meta: { ui: { visibility: ['model', 'app'] } },
+};
+
+export const schema = {
+  action: z.string().describe('Action identifier (e.g., "place_order", "apply_changes")'),
+  confirmed: z.boolean().describe('Whether the user confirmed the action'),
+  decidedAt: z.string().describe('ISO timestamp of the decision'),
+  payload: z.record(z.unknown()).optional().describe('Domain-specific data for the action'),
+};
+
+type Args = z.infer<z.ZodObject<typeof schema>>;
+
+export default async function (args: Args, _extra: ToolHandlerExtra) {
+  if (!args.confirmed) {
+    return {
+      content: [{ type: 'text' as const, text: 'Cancelled.' }],
+      structuredContent: { status: 'cancelled', message: 'Cancelled.' },
+    };
+  }
+
+  // In production, dispatch to your domain logic based on args.action
+  return {
+    content: [{ type: 'text' as const, text: 'Completed.' }],
+    structuredContent: { status: 'success', message: 'Completed.' },
+  };
+}
+```
+
+The UI tool (`review-purchase`) returns `structuredContent` with a `reviewTool` field that tells the review resource which backend tool to call on confirm/cancel:
+
+```ts
+// In the review-purchase handler's response:
+return {
+  structuredContent: {
+    title: 'Confirm Your Order',
+    sections: [/* ... */],
+    acceptLabel: 'Place Order',
+    reviewTool: {
+      name: 'review',
+      arguments: { action: 'place_order', payload: { orderId: 'order_123' } },
+    },
+  },
+};
+```
+
+When the user clicks "Place Order", the review resource calls `useCallServerTool` with the arguments plus `confirmed: true`. The tool returns both `content` (human-readable text for the host model) and `structuredContent` (with `status` and `message` for the UI). The review resource reads `structuredContent.status` to determine success/error styling and displays `structuredContent.message`. The same `review` tool handles all review variants — purchases, code diffs, social posts — differentiated by the `action` field. See the template's `review` resource for the full implementation.
+
+Tools without a UI are hidden from the simulator's simulation selector (there's nothing to render). They are still registered in the dev MCP server, so they can be called by UI resources via `useCallServerTool` or by the host directly. In production, they work as standard MCP tools.
 
 ## Multiple Tools Per Resource
 

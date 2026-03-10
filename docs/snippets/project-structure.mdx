@@ -5,11 +5,13 @@ my-app/
 │   │   └── review/
 │   │       └── review.tsx                   # Review UI component + resource metadata.
 │   ├── tools/
-│   │   ├── review-diff.ts                   # Tool with handler, schema, and resource reference.
-│   │   └── review-post.ts                   # Multiple tools can share one resource.
+│   │   ├── review-diff.ts                   # Tool with handler, schema, and optional resource link.
+│   │   ├── review-post.ts                   # Multiple tools can share one resource.
+│   │   └── review.ts                        # Backend-only tool (no resource, no UI).
 │   └── server.ts                            # Optional: auth, server config.
 ├── tests/simulations/
-│   ├── review-diff.json                     # Mock state for testing.
-│   └── review-post.json                     # Mock state for testing.
+│   ├── review-diff.json                     # Mock state for testing (includes serverTools).
+│   ├── review-post.json                     # Mock state for testing (includes serverTools).
+│   └── review-purchase.json                 # Mock state for testing (includes serverTools).
 └── package.json
 ```

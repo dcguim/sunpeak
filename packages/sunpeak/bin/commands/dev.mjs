@@ -248,9 +248,41 @@ export async function dev(projectRoot = process.cwd(), args = []) {
   for (const { name: toolName, path: toolPath } of toolFiles) {
     try {
       const { tool } = await extractToolExport(toolPath);
-      toolMap.set(toolName, tool);
+      toolMap.set(toolName, { tool, path: toolPath });
     } catch (err) {
       console.warn(`Warning: Could not extract metadata from tool ${toolName}: ${err.message}`);
+    }
+  }
+
+  // Create a project-level Vite SSR loader for loading backend-only tool handlers.
+  // Backend-only tools (no resource) need real handlers since their return values
+  // are consumed directly by UI resources via callServerTool.
+  const toolLoaderServer = await createServer({
+    root: projectRoot,
+    server: { middlewareMode: true, hmr: false },
+    resolve: {
+      alias: {
+        '@': path.resolve(projectRoot, 'src'),
+        ...(isTemplate && { sunpeak: parentSrc }),
+      },
+    },
+    appType: 'custom',
+    logLevel: 'silent',
+  });
+
+  // Load real handlers and schemas for backend-only tools
+  const toolHandlerMap = new Map();
+  for (const [toolName, { tool, path: toolPath }] of toolMap) {
+    if (!tool.resource) {
+      try {
+        const relativePath = path.relative(projectRoot, toolPath);
+        const mod = await toolLoaderServer.ssrLoadModule(`./${relativePath}`);
+        if (typeof mod.default === 'function') {
+          toolHandlerMap.set(toolName, { handler: mod.default });
+        }
+      } catch (err) {
+        console.warn(`Warning: Could not load handler for backend-only tool "${toolName}": ${err.message}`);
+      }
     }
   }
 
@@ -263,7 +295,8 @@ export async function dev(projectRoot = process.cwd(), args = []) {
     const toolName = typeof simulation.tool === 'string' ? simulation.tool : simName;
 
     // Look up tool metadata
-    const tool = toolMap.get(toolName);
+    const toolEntry = toolMap.get(toolName);
+    const tool = toolEntry?.tool;
     if (!tool) {
       console.warn(`Warning: Tool "${toolName}" not found for simulation "${simName}". Skipping.`);
       continue;
@@ -275,13 +308,13 @@ export async function dev(projectRoot = process.cwd(), args = []) {
       ? Array.from(resourceMap.keys()).find((k) => resourceMap.get(k).name === resourceName)
       : undefined;
 
-    if (!resourceKey) {
+    if (resourceName && !resourceKey) {
       console.warn(`Warning: No resource found for tool "${toolName}" in simulation "${simName}". Skipping.`);
       continue;
     }
 
-    // Determine source path for the resource
-    const resourceDir = resourceDirs.find((d) => d.key === resourceKey);
+    // Determine source path for the resource (if it has a UI)
+    const resourceDir = resourceKey ? resourceDirs.find((d) => d.key === resourceKey) : undefined;
     const srcPath = resourceDir
       ? `/src/resources/${resourceKey}/${basename(resourceDir.resourcePath)}`
       : undefined;
@@ -290,9 +323,33 @@ export async function dev(projectRoot = process.cwd(), args = []) {
       ...simulation,
       ...(typeof simulation.tool === 'string' ? { tool: { name: toolName, ...tool } } : {}),
       name: simName,
-      distPath: join(projectRoot, `dist/${resourceKey}/${resourceKey}.html`),
-      srcPath,
-      resource: resourceMap.get(resourceKey),
+      ...(resourceKey ? {
+        distPath: join(projectRoot, `dist/${resourceKey}/${resourceKey}.html`),
+        srcPath,
+        resource: resourceMap.get(resourceKey),
+      } : {}),
+      // Attach real handler + schema for backend-only tools (consumed by callServerTool)
+      ...(toolHandlerMap.has(toolName) ? {
+        handler: toolHandlerMap.get(toolName).handler,
+      } : {}),
+    });
+  }
+
+  // Register backend-only tools that have real handlers but no simulation file.
+  // These tools are callable by resources via callServerTool (e.g., a "review" tool
+  // that processes confirm/cancel actions). Without this, ChatGPT can't proxy
+  // callServerTool calls to the MCP server because the tool isn't registered.
+  for (const [toolName, { tool }] of toolMap) {
+    if (tool.resource) continue; // UI tools need simulations for their resource
+    const alreadyCovered = simulations.some(s =>
+      (s.tool?.name === toolName) || (typeof s.tool === 'string' && s.tool === toolName)
+    );
+    if (alreadyCovered) continue;
+    const handlerInfo = toolHandlerMap.get(toolName);
+    simulations.push({
+      name: `__tool_${toolName}`,
+      tool: { name: toolName, ...tool },
+      ...(handlerInfo ? { handler: handlerInfo.handler } : {}),
     });
   }
 
@@ -405,6 +462,7 @@ if (import.meta.hot) {
     // Handle signals - close all servers
     process.on('SIGINT', async () => {
       await mcpViteServer.close();
+      await toolLoaderServer.close();
       if (loaderServer) await loaderServer.close();
       await server.close();
       process.exit(0);
@@ -412,6 +470,7 @@ if (import.meta.hot) {
 
     process.on('SIGTERM', async () => {
       await mcpViteServer.close();
+      await toolLoaderServer.close();
       if (loaderServer) await loaderServer.close();
       await server.close();
       process.exit(0);
@@ -419,12 +478,14 @@ if (import.meta.hot) {
   } else {
     // No simulations - just handle signals for the dev server
     process.on('SIGINT', async () => {
+      await toolLoaderServer.close();
       if (loaderServer) await loaderServer.close();
       await server.close();
       process.exit(0);
     });
 
     process.on('SIGTERM', async () => {
+      await toolLoaderServer.close();
       if (loaderServer) await loaderServer.close();
       await server.close();
       process.exit(0);
