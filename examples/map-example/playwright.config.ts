@@ -1,6 +1,9 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const port = Number(process.env.SUNPEAK_TEST_PORT || 6776);
+
 export default defineConfig({
+  globalSetup: './tests/e2e/global-setup.ts',
   testDir: './tests/e2e',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
@@ -8,7 +11,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: 'list',
   use: {
-    baseURL: 'http://localhost:6776',
+    baseURL: `http://localhost:${port}`,
     trace: 'on-first-retry',
   },
   projects: [
@@ -23,8 +26,8 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'PORT=6776 pnpm dev',
-    url: 'http://localhost:6776',
+    command: `PORT=${port} pnpm dev`,
+    url: `http://localhost:${port}`,
     reuseExistingServer: !process.env.CI,
     timeout: 10000,
   },

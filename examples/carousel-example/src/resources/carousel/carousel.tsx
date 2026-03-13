@@ -1,4 +1,4 @@
-import { useToolData, useHostContext, useDisplayMode, SafeArea } from 'sunpeak';
+import { useToolData, useDeviceCapabilities, useDisplayMode, SafeArea } from 'sunpeak';
 import type { ResourceConfig } from 'sunpeak';
 import { Carousel, Card } from './components';
 
@@ -32,17 +32,59 @@ interface CarouselCard {
   description: string;
 }
 
+interface CarouselInput {
+  city?: string;
+  state?: string;
+  categories?: string[];
+  limit?: number;
+}
+
 interface CarouselData {
   places: CarouselCard[];
 }
 
 export function CarouselResource() {
-  const { output } = useToolData<unknown, CarouselData>(undefined, { places: [] });
-  const context = useHostContext();
+  const { output, inputPartial, isLoading, isError, isCancelled, cancelReason } = useToolData<
+    CarouselInput,
+    CarouselData
+  >();
+  const { touch: hasTouch = false } = useDeviceCapabilities();
   const displayMode = useDisplayMode();
-
-  const hasTouch = context?.deviceCapabilities?.touch ?? false;
   const places = output?.places ?? [];
+
+  if (isLoading) {
+    const searchContext = inputPartial?.city;
+    return (
+      <SafeArea className="flex items-center justify-center gap-2 p-8 text-[var(--color-text-secondary)]">
+        <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+        <span>{searchContext ? `Finding places in ${searchContext}…` : 'Loading places…'}</span>
+      </SafeArea>
+    );
+  }
+
+  if (isError) {
+    return (
+      <SafeArea className="flex items-center justify-center p-8 text-[var(--color-text-secondary)]">
+        Failed to load places
+      </SafeArea>
+    );
+  }
+
+  if (isCancelled) {
+    return (
+      <SafeArea className="flex items-center justify-center p-8 text-[var(--color-text-secondary)]">
+        {cancelReason ?? 'Request was cancelled'}
+      </SafeArea>
+    );
+  }
+
+  if (places.length === 0) {
+    return (
+      <SafeArea className="flex items-center justify-center p-8 text-[var(--color-text-secondary)]">
+        No places found
+      </SafeArea>
+    );
+  }
 
   return (
     <SafeArea className="p-4">

@@ -1,6 +1,6 @@
 ---
 name: create-sunpeak-app
-description: Use when working with sunpeak, or when the user asks to "build an MCP App", "build a ChatGPT App", "add a UI to an MCP tool", "create an interactive resource for Claude or ChatGPT", "build a React UI for an MCP server", or needs guidance on MCP App resources, tool-to-UI data flow, simulation files, host context, platform-specific ChatGPT/Claude features, or end-to-end testing of MCP App UIs.
+description: Use when working with sunpeak, or when the user asks to "build an MCP App", "build a ChatGPT App", "add a UI to an MCP tool", "create an interactive resource for Claude Connector or ChatGPT", "build a React UI for an MCP server", or needs guidance on MCP App resources, tool-to-UI data flow, simulation files, host context, platform-specific ChatGPT/Claude features, or end-to-end testing of MCP App UIs.
 ---
 
 # Create Sunpeak App
@@ -246,9 +246,15 @@ All hooks are imported from `sunpeak`:
 | `useHostContext()` | `McpUiHostContext \| null` | Host context (theme, locale, capabilities, etc.) |
 | `useTheme()` | `'light' \| 'dark' \| undefined` | Current theme |
 | `useDisplayMode()` | `'inline' \| 'pip' \| 'fullscreen'` | Current display mode (defaults to `'inline'`) |
-| `useSafeArea()` | `{ top, right, bottom, left }` | Safe area insets |
 | `useLocale()` | `string` | Host locale (e.g. `'en-US'`, defaults to `'en-US'`) |
-| `useViewport()` | `{ width, height }` | Viewport dimensions |
+| `useTimeZone()` | `string` | IANA time zone (falls back to browser time zone) |
+| `usePlatform()` | `'web' \| 'desktop' \| 'mobile' \| undefined` | Host-reported platform type |
+| `useDeviceCapabilities()` | `{ touch?, hover? }` | Device input capabilities |
+| `useUserAgent()` | `string \| undefined` | Host application identifier |
+| `useStyles()` | `McpUiHostStyles \| undefined` | Host style configuration (CSS variables, fonts) |
+| `useToolInfo()` | `{ id?, tool } \| undefined` | Metadata about the tool call that created this app |
+| `useSafeArea()` | `{ top, right, bottom, left }` | Safe area insets (px) |
+| `useViewport()` | `{ width, height, maxWidth, maxHeight }` | Container dimensions (px) |
 | `useIsMobile()` | `boolean` | True if viewport is mobile-sized |
 | `useApp()` | `App \| null` | Raw [MCP App](https://sunpeak.ai/docs/mcp-apps/mcp/overview) instance for direct SDK calls |
 | `useCallServerTool()` | `(params) => Promise<result>` | Returns a function to call a server-side tool by name |
@@ -409,9 +415,9 @@ The `sunpeak dev` command starts both the Vite dev server and the MCP server tog
 Use `sunpeak build && sunpeak start` to test production behavior locally with real handlers instead of simulation fixtures.
 
 The `sunpeak dev` command supports two orthogonal flags for testing different combinations:
-- `--live` — Route `callServerTool` to real tool handlers instead of simulation mocks
-- `--built` — Serve production-built HTML from `dist/` instead of Vite HMR
-- `--live --built` — Full smoke test: production bundles with real handlers
+- `--prod-tools` — Route `callServerTool` to real tool handlers instead of simulation mocks
+- `--prod-resources` — Serve production-built HTML from `dist/` instead of Vite HMR
+- `--prod-tools --prod-resources` — Full smoke test: production bundles with real handlers
 
 ### Production Server Options
 

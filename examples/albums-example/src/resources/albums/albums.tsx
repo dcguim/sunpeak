@@ -1,4 +1,4 @@
-import { SafeArea } from 'sunpeak';
+import { SafeArea, useDisplayMode } from 'sunpeak';
 import type { ResourceConfig } from 'sunpeak';
 import { Albums } from './components/albums';
 
@@ -22,8 +22,11 @@ export const resource: ResourceConfig = {
  * Can be dropped into any production environment without changes.
  */
 export function AlbumsResource() {
+  const displayMode = useDisplayMode();
+  const isFullscreen = displayMode === 'fullscreen';
+
   return (
-    <SafeArea className="p-4">
+    <SafeArea className={isFullscreen ? '' : 'p-4'}>
       <Albums />
     </SafeArea>
   );

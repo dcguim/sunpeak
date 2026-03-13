@@ -19,10 +19,19 @@ export { useToolData } from './use-tool-data';
 export type { ToolData } from './use-tool-data';
 
 // === Convenience hooks (thin wrappers around useHostContext) ===
-export { useTheme } from './use-theme';
+export { useDeviceCapabilities } from './use-device-capabilities';
+export type { DeviceCapabilities } from './use-device-capabilities';
 export { useDisplayMode } from './use-display-mode';
 export { useLocale } from './use-locale';
+export { usePlatform } from './use-platform';
+export type { HostPlatform } from './use-platform';
 export { useSafeArea } from './use-safe-area';
+export { useStyles } from './use-styles';
+export { useTheme } from './use-theme';
+export { useTimeZone } from './use-time-zone';
+export { useToolInfo } from './use-tool-info';
+export type { ToolInfo } from './use-tool-info';
+export { useUserAgent } from './use-user-agent';
 export { useViewport } from './use-viewport';
 export type { Viewport } from './use-viewport';
 export { useIsMobile } from './use-mobile';

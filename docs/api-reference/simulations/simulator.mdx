@@ -19,9 +19,6 @@ import 'sunpeak/style.css'; // Required to style the simulator.
 import { Simulator } from 'sunpeak/simulator';
 ```
 
-<Note>
-`ChatGPTSimulator` is available as a backwards-compatible alias: `import { ChatGPTSimulator } from 'sunpeak'`.
-</Note>
 
 ## Basic Usage
 
@@ -47,15 +44,19 @@ import { Simulator } from 'sunpeak/simulator';
 </ResponseField>
 
 <ResponseField name="onCallTool" type="(params: { name: string; arguments?: Record<string, unknown> }) => Promise<CallToolResult> | CallToolResult">
-  Override `callServerTool` resolution. When provided, enables the **Live** mode toggle in the sidebar. In Live mode, tool calls are forwarded to this callback instead of using simulation mock data. The `sunpeak dev` command wires this up automatically.
+  Override `callServerTool` resolution. When provided, enables the **Prod Tools** toggle in the sidebar. In Prod Tools mode, tool calls are forwarded to this callback instead of using simulation mock data. The `sunpeak dev` command wires this up automatically.
 </ResponseField>
 
-<ResponseField name="defaultLive" type="boolean" default="false">
-  Initial state of the Live mode toggle. When `true`, the simulator starts in Live mode. Set by the `--live` CLI flag.
+<ResponseField name="defaultProdTools" type="boolean" default="false">
+  Initial state of the Prod Tools toggle. When `true`, the simulator starts in Prod Tools mode. Set by the `--prod-tools` CLI flag.
 </ResponseField>
 
-<ResponseField name="hideLiveToggle" type="boolean" default="false">
-  Hide the Live mode checkbox in the sidebar header. Useful for embedded or marketing contexts where Live mode is not applicable.
+<ResponseField name="defaultProdResources" type="boolean" default="false">
+  Initial state of the Prod Resources toggle. When `true`, the simulator loads resources from `dist/` production builds instead of HMR. Set by the `--prod-resources` CLI flag.
+</ResponseField>
+
+<ResponseField name="hideSimulatorModes" type="boolean" default="false">
+  Hide the Prod Tools and Prod Resources checkboxes in the sidebar. Useful for embedded or marketing contexts where these modes are not applicable.
 </ResponseField>
 
 ## URL Parameters
@@ -79,6 +80,8 @@ The Simulator supports URL parameters for configuring the initial state. This is
 | `safeAreaBottom` | `number` | `0` | Bottom safe area inset |
 | `safeAreaLeft` | `number` | `0` | Left safe area inset |
 | `safeAreaRight` | `number` | `0` | Right safe area inset |
+| `prodTools` | `'true' \| 'false'` | `'false'` | Enable Prod Tools mode (real tool handlers) |
+| `prodResources` | `'true' \| 'false'` | `'false'` | Enable Prod Resources mode (dist/ bundles) |
 
 ### Example URLs
 
@@ -157,6 +160,8 @@ interface SimulatorUrlParams {
   safeAreaBottom?: number;
   safeAreaLeft?: number;
   safeAreaRight?: number;
+  prodTools?: boolean;
+  prodResources?: boolean;
 }
 ```
 
@@ -195,9 +200,10 @@ test.describe('Albums Resource', () => {
 
 The simulator sidebar provides interactive controls for:
 
-- **Live**: Toggle Live mode — calls real tool handlers instead of simulation mocks (requires `onCallTool` prop)
+- **Prod Tools**: Toggle Prod Tools mode — calls real tool handlers instead of simulation mocks (requires `onCallTool` prop)
+- **Prod Resources**: Toggle Prod Resources mode — loads production-built HTML from `dist/` instead of Vite HMR
 - **Host**: Switch between ChatGPT and Claude conversation shells
-- **Simulation / Tool**: Select which simulation (or tool, in Live mode) to display
+- **Simulation / Tool**: Select which simulation (or tool, in Prod Tools mode) to display
 - **Width**: Toggle between mobile (375px, 425px), tablet (768px), and full width (1024px)
 - **Theme**: Toggle between light and dark themes
 - **Display Mode**: Switch between inline, PiP, and fullscreen modes

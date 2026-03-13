@@ -14,17 +14,12 @@ interface Place {
 }
 
 let mockToolOutput: { places: Place[] } = { places: [] };
-let mockHostContext: {
-  deviceCapabilities?: { hover: boolean; touch: boolean };
-} | null = {
-  deviceCapabilities: { hover: true, touch: false },
-};
+let mockDeviceCapabilities: { hover?: boolean; touch?: boolean } = { hover: true, touch: false };
 let mockDisplayMode = 'inline';
 
 vi.mock('sunpeak', () => ({
-  useApp: () => null,
-  useToolData: (_defaultInput: unknown, defaultOutput: { places: Place[] }) => ({
-    output: mockToolOutput.places.length > 0 ? mockToolOutput : defaultOutput,
+  useToolData: () => ({
+    output: mockToolOutput,
     input: null,
     inputPartial: null,
     isError: false,
@@ -32,7 +27,7 @@ vi.mock('sunpeak', () => ({
     isCancelled: false,
     cancelReason: null,
   }),
-  useHostContext: () => mockHostContext,
+  useDeviceCapabilities: () => mockDeviceCapabilities,
   useDisplayMode: () => mockDisplayMode,
   SafeArea: ({ children, ...props }: { children: React.ReactNode; [key: string]: unknown }) => (
     <div data-testid="safe-area" {...props}>
@@ -78,7 +73,7 @@ describe('CarouselResource', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockToolOutput = { places: [] };
-    mockHostContext = { deviceCapabilities: { hover: true, touch: false } };
+    mockDeviceCapabilities = { hover: true, touch: false };
     mockDisplayMode = 'inline';
   });
 
@@ -92,16 +87,17 @@ describe('CarouselResource', () => {
     expect(screen.getByText('Mountain Lodge')).toBeInTheDocument();
   });
 
-  it('renders empty carousel when no places provided', () => {
+  it('shows empty state when no places provided', () => {
     mockToolOutput = { places: [] };
 
-    const { container } = render(<CarouselResource />);
+    render(<CarouselResource />);
 
-    expect(screen.getByTestId('carousel')).toBeInTheDocument();
-    expect(container.querySelectorAll('[data-testid="card"]').length).toBe(0);
+    expect(screen.getByText('No places found')).toBeInTheDocument();
   });
 
   it('wraps content in SafeArea', () => {
+    mockToolOutput = { places: mockPlaces };
+
     render(<CarouselResource />);
 
     const safeArea = screen.getByTestId('safe-area');
@@ -110,7 +106,7 @@ describe('CarouselResource', () => {
   });
 
   it('passes larger button size for touch devices', () => {
-    mockHostContext = { deviceCapabilities: { hover: false, touch: true } };
+    mockDeviceCapabilities = { hover: false, touch: true };
     mockToolOutput = { places: mockPlaces };
 
     render(<CarouselResource />);
@@ -122,7 +118,7 @@ describe('CarouselResource', () => {
   });
 
   it('passes standard button size for non-touch devices', () => {
-    mockHostContext = { deviceCapabilities: { hover: true, touch: false } };
+    mockDeviceCapabilities = { hover: true, touch: false };
     mockToolOutput = { places: mockPlaces };
 
     render(<CarouselResource />);

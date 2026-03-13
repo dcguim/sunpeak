@@ -8,17 +8,15 @@ const CLAUDE_HOST_INFO = {
   version: '1.0.0',
 };
 
-/**
- * Claude starts with the baseline MCP App capabilities.
- * Host-specific capabilities (if any) can be added here as Claude's
- * MCP App integration evolves.
- */
 const CLAUDE_HOST_CAPABILITIES: McpUiHostCapabilities = {
   openLinks: {},
   serverTools: {},
+  serverResources: {},
+  downloadFile: {},
   logging: {},
   updateModelContext: { text: {} },
   message: { text: {} },
+  sandbox: {},
 };
 
 /**

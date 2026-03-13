@@ -90,8 +90,8 @@ packages/sunpeak/
 ### Export Map (`sunpeak`)
 - `sunpeak` — Hooks, types, SDK re-exports (`App`, `RESOURCE_MIME_TYPE`, `LATEST_PROTOCOL_VERSION`, etc.), `simulator` + `chatgpt` namespaces
 - `sunpeak/simulator` — Generic Simulator, host shell system, infrastructure
-- `sunpeak/chatgpt` — ChatGPTSimulator (backwards compat alias), ChatGPT shell
-- `sunpeak/claude` — ClaudeSimulator alias, Claude shell
+- `sunpeak/chatgpt` — ChatGPT host shell registration + Simulator re-export
+- `sunpeak/claude` — Claude host shell registration + Simulator re-export
 - `sunpeak/mcp` — Server utilities (`runMCPServer`, `createMcpHandler`, `createHandler`, `createProductionMcpServer`, `startProductionHttpServer`), tool types (`AppToolConfig`, `ToolHandlerExtra`, `CallToolResult`, `AuthInfo`), production types (`ProductionTool`, `ProductionResource`, `ProductionServerConfig`, `WebHandlerConfig`, `WebAuthFunction`), SDK server helpers (`registerAppTool`, `registerAppResource`, `getUiCapability`, `EXTENSION_ID`)
 - `sunpeak/platform` — Platform detection
 - `sunpeak/platform/chatgpt` — ChatGPT-specific hooks (file upload, modals, checkout)
@@ -152,18 +152,18 @@ The `sunpeak dev` command runs a multi-server architecture:
 
 Port management: The loaderServer disables HMR entirely. The mcpViteServer uses port 24679 for its WebSocket. The main dev server listens on the user-facing port (default 5173).
 
-### `--live` and `--built` flags
+### `--prod-tools` and `--prod-resources` flags
 
 Two orthogonal flags that toggle real tool handlers and production resource bundles independently:
 
 | Flags | UI | Tools | Use case |
 |-------|-----|-------|----------|
 | *(none)* | HMR | Mocked | Day-to-day dev |
-| `--live` | HMR | Real handlers | Integration testing |
-| `--built` | Built | Mocked | CI/E2E, catch build regressions |
-| `--live --built` | Built | Real handlers | Final smoke test |
+| `--prod-tools` | HMR | Real handlers | Integration testing |
+| `--prod-resources` | Built | Mocked | CI/E2E, catch build regressions |
+| `--prod-tools --prod-resources` | Built | Real handlers | Final smoke test |
 
-**Implementation**: The dev server always registers a Vite middleware plugin (`POST /__sunpeak/call-tool`) and loads all tool handlers, so the simulator's **Live** checkbox can toggle between mock and real tool execution at runtime. `--live` sets the initial state of the Live checkbox to on (`__SUNPEAK_LIVE__` Vite define → `defaultLive` prop). `--built` runs `sunpeak build` before starting and serves `dist/` HTML via another Vite plugin (`__SUNPEAK_BUILT__` define consumed by `dev.tsx` to override `resourceUrl` paths). The `Simulator` component accepts `onCallTool`, `defaultLive`, and `hideLiveToggle` props.
+**Implementation**: The dev server always registers a Vite middleware plugin (`POST /__sunpeak/call-tool`) and loads all tool handlers, so the simulator's **Prod Tools** checkbox can toggle between mock and real tool execution at runtime. `--prod-tools` sets the initial state of the Prod Tools checkbox to on (`__SUNPEAK_PROD_TOOLS__` Vite define → `defaultProdTools` prop). Both **Prod Tools** and **Prod Resources** are runtime-toggleable checkboxes in the simulator sidebar. `--prod-resources` runs `sunpeak build` before starting and sets the initial state of the Prod Resources checkbox to on (`__SUNPEAK_PROD_RESOURCES__` define → `defaultProdResources` prop). The dist-serving Vite plugin (`/dist/` middleware) is always registered so Prod Resources mode can be toggled at runtime. When Prod Resources is on, the Simulator computes `/dist/{resourceName}/{resourceName}.html` from the simulation's resource metadata and uses it as the iframe `src` instead of the HMR dev URL. The `Simulator` component accepts `onCallTool`, `defaultProdTools`, `defaultProdResources`, and `hideSimulatorModes` props.
 
 ## Documentation (`docs/`)
 

@@ -11,9 +11,12 @@ const CHATGPT_HOST_INFO = {
 const CHATGPT_HOST_CAPABILITIES: McpUiHostCapabilities = {
   openLinks: {},
   serverTools: {},
+  serverResources: {},
+  downloadFile: {},
   logging: {},
   updateModelContext: { text: {} },
   message: { text: {} },
+  sandbox: {},
 };
 
 /**

@@ -1,34 +1,13 @@
 /**
  * ChatGPT-specific exports for the Sunpeak simulator.
  *
- * These components and utilities are designed for local development and testing,
- * simulating how resources render in ChatGPT's environment.
- *
- * @example
- * ```tsx
- * import { chatgpt, isChatGPT } from 'sunpeak';
- *
- * // Use the simulator for local development
- * function App() {
- *   return <chatgpt.ChatGPTSimulator simulations={simulations} />;
- * }
- *
- * // Check platform at runtime
- * if (isChatGPT()) {
- *   // Running in ChatGPT
- * }
- * ```
- *
  * @module sunpeak/chatgpt
  */
 
 // Register ChatGPT host shell (side effect)
 import './chatgpt-host';
 
-// Legacy simulator component (kept for backwards compatibility)
-export { ChatGPTSimulator } from './chatgpt-simulator';
-
-// Generic simulator (preferred)
+// Simulator
 export { Simulator } from '../simulator/simulator';
 
 // Simulator types

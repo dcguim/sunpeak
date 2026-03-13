@@ -465,7 +465,10 @@ export function findToolFiles(
   const entries = fs.readdirSync(toolsDir, { withFileTypes: true });
 
   return entries
-    .filter((entry) => !entry.isDirectory() && entry.name.endsWith('.ts'))
+    .filter(
+      (entry) =>
+        !entry.isDirectory() && entry.name.endsWith('.ts') && !entry.name.endsWith('.test.ts')
+    )
     .map((entry) => ({
       name: entry.name.replace(/\.ts$/, ''),
       path: `${toolsDir}/${entry.name}`,

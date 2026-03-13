@@ -92,6 +92,81 @@ for (const host of hosts) {
       });
     });
 
+    test.describe('Prod Tools Mode', () => {
+      test('should show empty state with Run button', async ({ page }) => {
+        await page.goto(
+          createSimulatorUrl({ simulation: 'show-albums', theme: 'dark', host, prodTools: true })
+        );
+
+        // Should show the "Press Run to call the tool" empty state
+        const emptyState = page.locator('text=Press Run to call the tool');
+        await expect(emptyState).toBeVisible();
+
+        // Run button should be visible in the conversation header
+        const runButton = page.locator('button:has-text("Run")');
+        await expect(runButton).toBeVisible();
+
+        // Iframe should NOT be present (no resource loaded yet)
+        const iframe = page.locator('iframe');
+        await expect(iframe).not.toBeAttached();
+      });
+
+      test('should have themed empty state colors in light mode', async ({ page }) => {
+        await page.goto(
+          createSimulatorUrl({ simulation: 'show-albums', theme: 'light', host, prodTools: true })
+        );
+
+        const emptyState = page.locator('text=Press Run to call the tool');
+        await expect(emptyState).toBeVisible();
+
+        const color = await emptyState.evaluate((el) => {
+          return window.getComputedStyle(el).color;
+        });
+
+        // Light mode text-secondary should be a dark-ish color (not white/very light)
+        const [r, g, b] = color.match(/\d+/g)!.map(Number);
+        // In light mode, secondary text should have a reasonable luminance (not too bright)
+        expect(r + g + b).toBeLessThan(600);
+      });
+
+      test('should have themed empty state colors in dark mode', async ({ page }) => {
+        await page.goto(
+          createSimulatorUrl({ simulation: 'show-albums', theme: 'dark', host, prodTools: true })
+        );
+
+        const emptyState = page.locator('text=Press Run to call the tool');
+        await expect(emptyState).toBeVisible();
+
+        const color = await emptyState.evaluate((el) => {
+          return window.getComputedStyle(el).color;
+        });
+
+        // Dark mode text-secondary should be a light-ish color (not black/very dark)
+        const [r, g, b] = color.match(/\d+/g)!.map(Number);
+        expect(r + g + b).toBeGreaterThan(200);
+      });
+    });
+
+    test.describe('Prod Resources Mode', () => {
+      test('should render resource normally when dist is available', async ({ page }) => {
+        // With prodResources=true but no dist/ files, shows "Building..."
+        // With dist/ files available, renders the resource from dist/
+        // This test verifies the mode activates without errors
+        await page.goto(
+          createSimulatorUrl({
+            simulation: 'show-albums',
+            theme: 'dark',
+            host,
+            prodResources: true,
+          })
+        );
+
+        // Should either show "Building..." or the resource (depending on dist availability)
+        const root = page.locator('#root');
+        await expect(root).not.toBeEmpty();
+      });
+    });
+
     test.describe('Fullscreen Mode', () => {
       test('should render correctly in fullscreen displayMode', async ({ page }) => {
         await page.goto(

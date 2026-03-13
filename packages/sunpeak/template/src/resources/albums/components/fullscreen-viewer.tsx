@@ -1,5 +1,4 @@
 import * as React from 'react';
-import { SafeArea } from 'sunpeak';
 import { cn } from '@/lib/index';
 import { FilmStrip } from './film-strip';
 import type { Album } from './albums';
@@ -41,7 +40,7 @@ export function FullscreenViewer({ album, className }: FullscreenViewerProps) {
   const isMobile = width > 0 && width < 768;
 
   return (
-    <SafeArea
+    <div
       ref={containerRef}
       className={cn(
         'h-full flex w-full bg-[var(--color-background-primary)]',
@@ -78,6 +77,6 @@ export function FullscreenViewer({ album, className }: FullscreenViewerProps) {
           />
         ) : null}
       </div>
-    </SafeArea>
+    </div>
   );
 }

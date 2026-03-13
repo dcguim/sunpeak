@@ -14,7 +14,10 @@ export const schema = {
     .describe('Action identifier (e.g., "place_order", "apply_changes", "publish")'),
   confirmed: z.boolean().describe('Whether the user confirmed the action'),
   decidedAt: z.string().describe('ISO timestamp of the decision'),
-  payload: z.record(z.unknown()).optional().describe('Domain-specific data for the action'),
+  payload: z
+    .record(z.string(), z.unknown())
+    .optional()
+    .describe('Domain-specific data for the action'),
 };
 
 type Args = z.infer<z.ZodObject<typeof schema>>;

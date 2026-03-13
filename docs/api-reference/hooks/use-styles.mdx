@@ -1,0 +1,51 @@
+---
+title: "useStyles"
+description: "Get host style configuration."
+keywords: ["MCP Apps", "ChatGPT Apps", "React hooks", "styles", "theming", "CSS variables"]
+---
+
+<Badge color="yellow">sunpeak API</Badge>
+
+## Overview
+
+The `useStyles` hook returns the host's style configuration. It is a convenience wrapper around `useHostContext`.
+
+<Tip>For most use cases, prefer the SDK's [`useHostStyleVariables`](/mcp-apps/react/use-host-styles) or [`useHostFonts`](/mcp-apps/react/use-host-styles) hooks which automatically apply styles to the document. Use `useStyles` when you need raw access to the style data.</Tip>
+
+## Import
+
+```tsx
+import { useStyles } from 'sunpeak';
+```
+
+## Signature
+
+```tsx
+function useStyles(): McpUiHostStyles | undefined
+```
+
+## Returns
+
+<ResponseField name="return" type="McpUiHostStyles | undefined">
+  The host's style configuration including CSS variables and font settings, or `undefined` if the host does not provide styles.
+</ResponseField>
+
+## Usage
+
+```tsx
+import { useStyles } from 'sunpeak';
+
+function MyResource() {
+  const styles = useStyles();
+
+  return (
+    <div>
+      {styles?.variables?.['--color-text-primary'] && (
+        <p>Primary text color: {styles.variables['--color-text-primary']}</p>
+      )}
+    </div>
+  );
+}
+```
+
+The styles value comes from [`McpUiHostContext.styles`](/mcp-apps/types/core-types#mcpuihostcontext).

@@ -8,7 +8,7 @@ keywords: ["MCP Apps", "ChatGPT Apps", "React component", "safe area", "layout"]
 
 ## Overview
 
-The `SafeArea` component wraps content with device safe area padding and viewport height constraints. It replaces the common pattern of manually combining `useSafeArea()` and `useViewport()` in every resource.
+The `SafeArea` component wraps content with device safe area padding and viewport dimension constraints. It replaces the common pattern of manually combining `useSafeArea()` and `useViewport()` in every resource.
 
 ## Import
 
@@ -43,8 +43,9 @@ function MyResource() {
 
 `SafeArea` renders a `<div>` with:
 
-- `paddingTop`, `paddingBottom`, `paddingLeft`, `paddingRight` from the host's safe area insets (for notches, status bars, rounded corners)
-- `maxHeight` from the host's viewport dimensions
+- `paddingTop`, `paddingBottom`, `paddingLeft`, `paddingRight` from the host's safe area insets in pixels (for notches, status bars, rounded corners)
+- `height`, `maxHeight`, `width`, `maxWidth` from the host's container dimensions in pixels (whichever the host provides)
+- In **fullscreen** mode, `height: 100dvh` is applied automatically (unless the host provides an explicit height), so flex column layouts with internal scrolling work without manual display mode handling
 
 You can override or extend these via the `style` prop. Any additional props (like `className`) are passed through to the underlying `<div>`.
 

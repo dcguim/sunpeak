@@ -155,19 +155,96 @@ export function SimpleSidebar({ children, controls, headerRight }: SimpleSidebar
   );
 }
 
+/* ── Help icon with tooltip ── */
+
+const DOCS_BASE_URL = 'https://sunpeak.ai/docs';
+
+interface HelpIconProps {
+  tooltip: string;
+  docsPath: string;
+}
+
+function HelpIcon({ tooltip, docsPath }: HelpIconProps) {
+  const [pos, setPos] = React.useState<{ top: number; left: number } | null>(null);
+  const ref = React.useRef<HTMLAnchorElement>(null);
+
+  const showTooltip = () => {
+    const rect = ref.current?.getBoundingClientRect();
+    if (rect) {
+      setPos({ top: rect.top + rect.height / 2, left: rect.right + 6 });
+    }
+  };
+
+  return (
+    <a
+      ref={ref}
+      href={`${DOCS_BASE_URL}/${docsPath}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex items-center justify-center no-underline flex-shrink-0 transition-colors"
+      style={{
+        color: 'var(--color-text-tertiary, var(--color-text-secondary))',
+      }}
+      onClick={(e) => e.stopPropagation()}
+      onMouseEnter={showTooltip}
+      onMouseLeave={() => setPos(null)}
+    >
+      <svg
+        width="12"
+        height="12"
+        viewBox="0 0 12 12"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <circle cx="6" cy="6" r="5.25" stroke="currentColor" strokeWidth="1" />
+        <text
+          x="6.25"
+          y="8.5"
+          textAnchor="middle"
+          fill="currentColor"
+          fontSize="7.5"
+          fontWeight="600"
+          fontFamily="system-ui, sans-serif"
+        >
+          ?
+        </text>
+      </svg>
+      {pos && (
+        <span
+          className="pointer-events-none fixed whitespace-nowrap rounded px-2 py-1 text-[11px] font-normal leading-tight z-[200]"
+          style={{
+            top: pos.top,
+            left: pos.left,
+            transform: 'translateY(-50%)',
+            backgroundColor: 'var(--color-text-primary)',
+            color: 'var(--color-background-primary)',
+          }}
+        >
+          {tooltip}
+        </span>
+      )}
+    </a>
+  );
+}
+
 interface SidebarControlProps {
   label: string;
   children: React.ReactNode;
+  /** Short tooltip shown on hover of the help icon */
+  tooltip?: string;
+  /** Docs path appended to https://sunpeak.ai/docs/ */
+  docsPath?: string;
 }
 
-export function SidebarControl({ label, children }: SidebarControlProps) {
+export function SidebarControl({ label, children, tooltip, docsPath }: SidebarControlProps) {
   return (
     <div className="space-y-1">
       <span
-        className="text-[10px] font-medium leading-tight"
+        className="text-[10px] font-medium leading-tight inline-flex items-center gap-1"
         style={{ color: 'var(--color-text-secondary)' }}
       >
         {label}
+        {tooltip && docsPath && <HelpIcon tooltip={tooltip} docsPath={docsPath} />}
       </span>
       {children}
     </div>
@@ -178,12 +255,18 @@ interface SidebarCollapsibleControlProps {
   label: string;
   children: React.ReactNode;
   defaultCollapsed?: boolean;
+  /** Short tooltip shown on hover of the help icon */
+  tooltip?: string;
+  /** Docs path appended to https://sunpeak.ai/docs/ */
+  docsPath?: string;
 }
 
 export function SidebarCollapsibleControl({
   label,
   children,
   defaultCollapsed = true,
+  tooltip,
+  docsPath,
 }: SidebarCollapsibleControlProps) {
   const [isCollapsed, setIsCollapsed] = React.useState(defaultCollapsed);
 
@@ -195,7 +278,10 @@ export function SidebarCollapsibleControl({
         style={{ color: 'var(--color-text-secondary)' }}
         type="button"
       >
-        <span>{label}</span>
+        <span className="inline-flex items-center gap-1">
+          {label}
+          {tooltip && docsPath && <HelpIcon tooltip={tooltip} docsPath={docsPath} />}
+        </span>
         <span className="text-[8px]">{isCollapsed ? '▶' : '▼'}</span>
       </button>
       {!isCollapsed && children}
@@ -276,12 +362,22 @@ interface SidebarCheckboxProps {
   checked: boolean;
   onChange: (checked: boolean) => void;
   label: string;
+  /** Short tooltip shown on hover of the help icon */
+  tooltip?: string;
+  /** Docs path appended to https://sunpeak.ai/docs/ */
+  docsPath?: string;
 }
 
-export function SidebarCheckbox({ checked, onChange, label }: SidebarCheckboxProps) {
+export function SidebarCheckbox({
+  checked,
+  onChange,
+  label,
+  tooltip,
+  docsPath,
+}: SidebarCheckboxProps) {
   const id = React.useId();
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-1.5">
       <input
         id={id}
         type="checkbox"
@@ -291,10 +387,11 @@ export function SidebarCheckbox({ checked, onChange, label }: SidebarCheckboxPro
       />
       <label
         htmlFor={id}
-        className="text-[11px] select-none cursor-pointer leading-tight"
+        className="text-[11px] select-none cursor-pointer leading-tight inline-flex items-center gap-1"
         style={{ color: 'var(--color-text-primary)' }}
       >
         {label}
+        {tooltip && docsPath && <HelpIcon tooltip={tooltip} docsPath={docsPath} />}
       </label>
     </div>
   );

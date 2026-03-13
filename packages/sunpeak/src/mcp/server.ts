@@ -166,6 +166,11 @@ type AppServerResult = {
   }[];
 };
 
+// Server-startup timestamp for cache-busting resource URIs.
+// Stable within a dev server session (so ChatGPT cross-session reads work)
+// but changes on restart so Claude picks up rebuilt resources.
+const startupTimestamp = Date.now().toString(36);
+
 function createAppServer(
   config: MCPServerConfig,
   simulations: SimulationWithDist[],
@@ -205,10 +210,11 @@ function createAppServer(
     if (resource) {
       // ── UI tool: register resource + tool via ext-apps helper ──
 
-      // Use the resource's URI, or derive a stable one from the resource name.
-      // Must be stable across all sessions — ChatGPT reads resource URIs from the tools/list
-      // response in one session, then fetches the content in a separate resources/read session.
-      const uri = (resource.uri as string) ?? `ui://${resource.name as string}`;
+      // Derive a URI from the resource name with a startup timestamp for cache-busting.
+      // Stable within a dev server session (ChatGPT reads URIs from tools/list in one
+      // session and fetches content in another), but changes on restart so hosts like
+      // Claude pick up rebuilt resources.
+      const uri = (resource.uri as string) ?? `ui://${resource.name as string}-${startupTimestamp}`;
       const resourceName = resource.name as string;
       const resourceMeta = (resource._meta as Record<string, unknown>) ?? {};
 
@@ -294,7 +300,7 @@ function createAppServer(
           const argKeys = Object.keys(args);
           const argsStr = argKeys.length > 0 ? `{${argKeys.join(', ')}}` : '{}';
 
-          // Use real handler when available (--live mode), fall back to simulation mock
+          // Use real handler when available (Prod Tools mode), fall back to simulation mock
           const realHandler = simulation.handler;
           if (realHandler) {
             console.log(`[MCP] CallTool: ${tool.name}${argsStr} → live handler`);
@@ -703,7 +709,7 @@ export function runMCPServer(config: MCPServerConfig): MCPServerHandle {
     invalidateResources() {
       if (sessions.size === 0) return;
 
-      const timestamp = Date.now();
+      const timestamp = Date.now().toString(36);
       for (const [, session] of sessions) {
         // Update resource URIs with timestamp to force cache-busting.
         // .update() automatically sends resources/list_changed notification.

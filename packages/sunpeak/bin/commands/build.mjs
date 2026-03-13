@@ -355,7 +355,7 @@ ${jsContents}
 
   // Find tool files
   const toolFiles = existsSync(toolsDir)
-    ? readdirSync(toolsDir).filter(f => f.endsWith('.ts'))
+    ? readdirSync(toolsDir).filter(f => f.endsWith('.ts') && !f.endsWith('.test.ts'))
     : [];
 
   const hasServerEntry = existsSync(serverEntryPath);

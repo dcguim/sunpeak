@@ -109,7 +109,6 @@ export type { Platform } from './platform';
 // Usage: <simulator.Simulator ... />
 export * as simulator from './simulator';
 
-// === ChatGPT-specific exports (namespaced, backwards compatible) ===
+// === ChatGPT-specific exports (namespaced) ===
 // Import as: import { chatgpt } from 'sunpeak';
-// Usage: <chatgpt.ChatGPTSimulator ... />
 export * as chatgpt from './chatgpt';

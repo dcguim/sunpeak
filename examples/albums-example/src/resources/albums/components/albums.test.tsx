@@ -6,24 +6,32 @@ import { Albums, type AlbumsData } from './albums';
 const mockSetState = vi.fn();
 const mockRequestDisplayMode = vi.fn();
 let mockToolOutput: AlbumsData = { albums: [] };
-let mockHostContext: {
-  deviceCapabilities?: { hover: boolean; touch: boolean };
-} | null = {
-  deviceCapabilities: { hover: true, touch: false },
+let mockDeviceCapabilities: { hover?: boolean; touch?: boolean } = {
+  hover: true,
+  touch: false,
 };
+let mockAvailableModes: string[] = ['inline', 'fullscreen'];
+
+const mockUpdateModelContext = vi.fn();
 
 vi.mock('sunpeak', () => ({
-  useApp: () => ({ requestDisplayMode: mockRequestDisplayMode }),
   useToolData: () => ({
     output: mockToolOutput,
     input: null,
     inputPartial: null,
     isError: false,
     isLoading: false,
+    isCancelled: false,
+    cancelReason: null,
   }),
   useDisplayMode: () => 'inline',
-  useHostContext: () => mockHostContext,
+  useDeviceCapabilities: () => mockDeviceCapabilities,
+  useRequestDisplayMode: () => ({
+    requestDisplayMode: mockRequestDisplayMode,
+    availableModes: mockAvailableModes,
+  }),
   useAppState: () => [{ selectedAlbumId: null }, mockSetState],
+  useUpdateModelContext: () => mockUpdateModelContext,
 }));
 
 // Mock child components to simplify testing
@@ -74,7 +82,8 @@ describe('Albums', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockToolOutput = { albums: mockAlbums };
-    mockHostContext = { deviceCapabilities: { hover: true, touch: false } };
+    mockDeviceCapabilities = { hover: true, touch: false };
+    mockAvailableModes = ['inline', 'fullscreen'];
   });
 
   it('renders Carousel with all albums in default mode', () => {
@@ -104,24 +113,19 @@ describe('Albums', () => {
     expect(result).toEqual({ selectedAlbumId: 'album-1' });
 
     // Should request fullscreen mode
-    expect(mockRequestDisplayMode).toHaveBeenCalledWith({ mode: 'fullscreen' });
+    expect(mockRequestDisplayMode).toHaveBeenCalledWith('fullscreen');
   });
 
-  it('renders empty carousel when no albums provided', () => {
+  it('shows empty state when no albums provided', () => {
     mockToolOutput = { albums: [] };
 
-    const { container } = render(<Albums />);
+    render(<Albums />);
 
-    // Should render carousel (even if empty)
-    expect(screen.getByTestId('carousel')).toBeInTheDocument();
-
-    // Should not render any album cards
-    const buttons = container.querySelectorAll('button');
-    expect(buttons.length).toBe(0);
+    expect(screen.getByText('No albums found')).toBeInTheDocument();
   });
 
   it('passes larger button size for touch devices', () => {
-    mockHostContext = { deviceCapabilities: { hover: false, touch: true } };
+    mockDeviceCapabilities = { hover: false, touch: true };
 
     render(<Albums />);
 
@@ -132,7 +136,7 @@ describe('Albums', () => {
   });
 
   it('passes standard button size for non-touch devices', () => {
-    mockHostContext = { deviceCapabilities: { hover: true, touch: false } };
+    mockDeviceCapabilities = { hover: true, touch: false };
 
     render(<Albums />);
 

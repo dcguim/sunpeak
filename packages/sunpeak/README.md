@@ -18,7 +18,7 @@
 
 Local-first MCP Apps framework.
 
-Quickstart, build, test, and ship your Claude or ChatGPT App!
+Quickstart, build, test, and ship your Claude Connector or ChatGPT App!
 
 [Demo (Hosted)](https://sunpeak.ai/simulator) ~
 [Demo (Video)](https://cdn.sunpeak.ai/sunpeak-demo-prod.mp4) ~

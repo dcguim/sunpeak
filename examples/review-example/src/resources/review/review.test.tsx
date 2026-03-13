@@ -15,21 +15,18 @@ let mockState: Record<string, unknown> = {
   serverMessage: null,
   serverError: false,
 };
-let mockHostContext: {
-  deviceCapabilities?: { hover: boolean; touch: boolean };
-} | null = {
-  deviceCapabilities: { hover: true, touch: false },
+let mockDeviceCapabilities: { hover?: boolean; touch?: boolean } = {
+  hover: true,
+  touch: false,
 };
+let mockAvailableModes: string[] = ['inline', 'fullscreen'];
 let mockDisplayMode: 'inline' | 'fullscreen' = 'inline';
 
-const mockApp = {
-  requestDisplayMode: mockRequestDisplayMode,
-};
+const mockUpdateModelContext = vi.fn();
 
 vi.mock('sunpeak', () => ({
-  useApp: () => mockApp,
-  useToolData: (_defaultInput: unknown, defaultOutput: Record<string, unknown>) => ({
-    output: { ...defaultOutput, ...mockToolOutput },
+  useToolData: () => ({
+    output: mockToolOutput,
     input: null,
     inputPartial: null,
     isError: false,
@@ -37,10 +34,18 @@ vi.mock('sunpeak', () => ({
     isCancelled: false,
     cancelReason: null,
   }),
-  useHostContext: () => mockHostContext,
+  useDeviceCapabilities: () => mockDeviceCapabilities,
+  useHostInfo: () => ({ hostVersion: undefined, hostCapabilities: { serverTools: true } }),
   useDisplayMode: () => mockDisplayMode,
+  useRequestDisplayMode: () => ({
+    requestDisplayMode: mockRequestDisplayMode,
+    availableModes: mockAvailableModes,
+  }),
   useAppState: () => [mockState, mockSetState],
   useCallServerTool: () => mockCallServerTool,
+  useUpdateModelContext: () => mockUpdateModelContext,
+  useTimeZone: () => 'America/New_York',
+  useLocale: () => 'en-US',
   SafeArea: ({ children, ...props }: { children: React.ReactNode; [key: string]: unknown }) => (
     <div data-testid="safe-area" {...props}>
       {children}
@@ -100,7 +105,8 @@ describe('ReviewResource', () => {
       serverMessage: null,
       serverError: false,
     };
-    mockHostContext = { deviceCapabilities: { hover: true, touch: false } };
+    mockDeviceCapabilities = { hover: true, touch: false };
+    mockAvailableModes = ['inline', 'fullscreen'];
     mockDisplayMode = 'inline';
   });
 
@@ -122,14 +128,6 @@ describe('ReviewResource', () => {
       render(<ReviewResource />);
 
       expect(screen.getByText('Please review the following items')).toBeInTheDocument();
-    });
-
-    it('renders loading when no sections', () => {
-      mockToolOutput = { title: 'Test', sections: [] };
-
-      render(<ReviewResource />);
-
-      expect(screen.getByText('Loading...')).toBeInTheDocument();
     });
   });
 
@@ -610,8 +608,8 @@ describe('ReviewResource', () => {
       expect(safeArea).toBeInTheDocument();
     });
 
-    it('handles null host context', () => {
-      mockHostContext = null;
+    it('handles empty device capabilities gracefully', () => {
+      mockDeviceCapabilities = {};
 
       // Should render without errors
       render(<ReviewResource />);
@@ -621,7 +619,7 @@ describe('ReviewResource', () => {
 
   describe('Touch Device Support', () => {
     it('renders larger buttons for touch devices', () => {
-      mockHostContext = { deviceCapabilities: { hover: false, touch: true } };
+      mockDeviceCapabilities = { hover: false, touch: true };
 
       render(<ReviewResource />);
 
@@ -633,7 +631,7 @@ describe('ReviewResource', () => {
     });
 
     it('renders standard buttons for non-touch devices', () => {
-      mockHostContext = { deviceCapabilities: { hover: true, touch: false } };
+      mockDeviceCapabilities = { hover: true, touch: false };
 
       render(<ReviewResource />);
 
@@ -644,8 +642,8 @@ describe('ReviewResource', () => {
       expect(rejectButton).toHaveAttribute('data-size', 'md');
     });
 
-    it('handles null host context gracefully', () => {
-      mockHostContext = null;
+    it('handles empty device capabilities gracefully', () => {
+      mockDeviceCapabilities = {};
 
       render(<ReviewResource />);
 
@@ -679,7 +677,7 @@ describe('ReviewResource', () => {
       const expandButton = screen.getByLabelText('Enter fullscreen');
       fireEvent.click(expandButton);
 
-      expect(mockRequestDisplayMode).toHaveBeenCalledWith({ mode: 'fullscreen' });
+      expect(mockRequestDisplayMode).toHaveBeenCalledWith('fullscreen');
     });
   });
 });

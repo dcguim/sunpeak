@@ -4,7 +4,6 @@ import { MapResource } from './map';
 
 // Mock sunpeak — SafeArea renders as a plain div
 vi.mock('sunpeak', () => ({
-  useApp: () => null,
   SafeArea: ({ children, ...props }: { children: React.ReactNode; [key: string]: unknown }) => (
     <div data-testid="safe-area" {...props}>
       {children}

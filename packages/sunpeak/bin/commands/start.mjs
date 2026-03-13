@@ -114,7 +114,7 @@ export async function start(projectRoot = process.cwd(), args = []) {
   const tools = [];
 
   if (existsSync(toolsDir)) {
-    const toolFiles = readdirSync(toolsDir).filter(f => f.endsWith('.js'));
+    const toolFiles = readdirSync(toolsDir).filter(f => f.endsWith('.js') && !f.endsWith('.test.js'));
 
     for (const file of toolFiles) {
       const toolName = file.replace(/\.js$/, '');

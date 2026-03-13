@@ -1,0 +1,44 @@
+---
+title: "useTimeZone"
+description: "Get the user's time zone."
+keywords: ["MCP Apps", "ChatGPT Apps", "React hooks", "timezone", "time zone", "IANA"]
+---
+
+<Badge color="yellow">sunpeak API</Badge>
+
+## Overview
+
+The `useTimeZone` hook returns the user's time zone from the host. It is a convenience wrapper around `useHostContext`.
+
+## Import
+
+```tsx
+import { useTimeZone } from 'sunpeak';
+```
+
+## Signature
+
+```tsx
+function useTimeZone(): string
+```
+
+## Returns
+
+<ResponseField name="return" type="string">
+  IANA time zone string (e.g., `'America/New_York'`). Falls back to the browser's local time zone when the host does not report one.
+</ResponseField>
+
+## Usage
+
+```tsx
+import { useTimeZone } from 'sunpeak';
+
+function MyResource() {
+  const timeZone = useTimeZone();
+
+  const time = new Date().toLocaleTimeString('en-US', { timeZone });
+  return <p>Current time: {time}</p>;
+}
+```
+
+The time zone value comes from [`McpUiHostContext.timeZone`](/mcp-apps/types/core-types#mcpuihostcontext).

@@ -43,10 +43,10 @@ interface McpUiHostContext {
   displayMode?: McpUiDisplayMode;
   availableDisplayModes?: McpUiDisplayMode[];
   containerDimensions?: {
-    width?: number;
-    maxWidth?: number;
-    height?: number;
-    maxHeight?: number;
+    width?: number;     // pixels
+    maxWidth?: number;  // pixels
+    height?: number;    // pixels
+    maxHeight?: number; // pixels
   };
   locale?: string;           // BCP 47 format (e.g., "en-US")
   timeZone?: string;         // IANA format (e.g., "America/New_York")
@@ -57,10 +57,10 @@ interface McpUiHostContext {
     hover?: boolean;
   };
   safeAreaInsets?: {
-    top: number;
-    right: number;
-    bottom: number;
-    left: number;
+    top: number;    // pixels
+    right: number;  // pixels
+    bottom: number; // pixels
+    left: number;   // pixels
   };
 }
 ```

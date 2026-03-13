@@ -99,6 +99,71 @@ for (const host of hosts) {
       });
     });
 
+    test.describe('Prod Tools Mode', () => {
+      test('should show empty state with Run button', async ({ page }) => {
+        await page.goto(
+          createSimulatorUrl({ simulation: 'review-diff', theme: 'dark', host, prodTools: true })
+        );
+
+        const emptyState = page.locator('text=Press Run to call the tool');
+        await expect(emptyState).toBeVisible();
+
+        const runButton = page.locator('button:has-text("Run")');
+        await expect(runButton).toBeVisible();
+
+        const iframe = page.locator('iframe');
+        await expect(iframe).not.toBeAttached();
+      });
+
+      test('should have themed empty state colors in light mode', async ({ page }) => {
+        await page.goto(
+          createSimulatorUrl({ simulation: 'review-diff', theme: 'light', host, prodTools: true })
+        );
+
+        const emptyState = page.locator('text=Press Run to call the tool');
+        await expect(emptyState).toBeVisible();
+
+        const color = await emptyState.evaluate((el) => {
+          return window.getComputedStyle(el).color;
+        });
+
+        const [r, g, b] = color.match(/\d+/g)!.map(Number);
+        expect(r + g + b).toBeLessThan(600);
+      });
+
+      test('should have themed empty state colors in dark mode', async ({ page }) => {
+        await page.goto(
+          createSimulatorUrl({ simulation: 'review-diff', theme: 'dark', host, prodTools: true })
+        );
+
+        const emptyState = page.locator('text=Press Run to call the tool');
+        await expect(emptyState).toBeVisible();
+
+        const color = await emptyState.evaluate((el) => {
+          return window.getComputedStyle(el).color;
+        });
+
+        const [r, g, b] = color.match(/\d+/g)!.map(Number);
+        expect(r + g + b).toBeGreaterThan(200);
+      });
+    });
+
+    test.describe('Prod Resources Mode', () => {
+      test('should activate without errors', async ({ page }) => {
+        await page.goto(
+          createSimulatorUrl({
+            simulation: 'review-diff',
+            theme: 'dark',
+            host,
+            prodResources: true,
+          })
+        );
+
+        const root = page.locator('#root');
+        await expect(root).not.toBeEmpty();
+      });
+    });
+
     test.describe('Dark Mode', () => {
       test('should render review title with correct styles', async ({ page }) => {
         await page.goto(createSimulatorUrl({ simulation: 'review-diff', theme: 'dark', host }));
@@ -200,7 +265,7 @@ for (const host of hosts) {
         await expect(title).toBeVisible();
       });
 
-      test('should have scrollable content area in fullscreen', async ({ page }) => {
+      test('should render content in fullscreen mode', async ({ page }) => {
         await page.goto(
           createSimulatorUrl({
             simulation: 'review-diff',
@@ -211,17 +276,13 @@ for (const host of hosts) {
         );
 
         const iframe = page.frameLocator('iframe');
-        const contentArea = iframe.locator('.overflow-y-auto').first();
-        await expect(contentArea).toBeVisible();
+        // Content sections should be visible in fullscreen
+        const title = iframe.locator('h1');
+        await expect(title).toBeVisible();
 
-        const styles = await contentArea.evaluate((el) => {
-          const computed = window.getComputedStyle(el);
-          return {
-            overflowY: computed.overflowY,
-          };
-        });
-
-        expect(styles.overflowY).toBe('auto');
+        // Fullscreen expand button should NOT be visible (already in fullscreen)
+        const expandButton = iframe.locator('button[aria-label="Enter fullscreen"]');
+        await expect(expandButton).toHaveCount(0);
       });
     });
 

@@ -1,0 +1,52 @@
+---
+title: "useUserAgent"
+description: "Get the host application identifier."
+keywords: ["MCP Apps", "ChatGPT Apps", "React hooks", "user agent", "host identifier"]
+---
+
+<Badge color="yellow">sunpeak API</Badge>
+
+## Overview
+
+The `useUserAgent` hook returns the host application identifier string from [`McpUiHostContext.userAgent`](/mcp-apps/types/core-types#mcpuihostcontext). This is an opaque string set by the host — not the browser's `navigator.userAgent`. It is a convenience wrapper around `useHostContext`.
+
+<Note>
+  The format and content of this string is host-defined. Not all hosts report a user agent, so the value may be `undefined`.
+</Note>
+
+**Known host values:**
+
+| Host | `userAgent` value |
+|------|-------------------|
+| ChatGPT | `"chatgpt"` |
+| Claude | Browser user-agent string (e.g. `"Mozilla/5.0 ..."`) |
+
+## Import
+
+```tsx
+import { useUserAgent } from 'sunpeak';
+```
+
+## Signature
+
+```tsx
+function useUserAgent(): string | undefined
+```
+
+## Returns
+
+<ResponseField name="return" type="string | undefined">
+  The host application identifier string, or `undefined` if the host does not report one.
+</ResponseField>
+
+## Usage
+
+```tsx
+import { useUserAgent } from 'sunpeak';
+
+function MyResource() {
+  const userAgent = useUserAgent();
+
+  return <p>Host: {userAgent ?? 'unknown'}</p>;
+}
+```

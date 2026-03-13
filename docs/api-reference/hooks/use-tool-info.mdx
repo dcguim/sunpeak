@@ -1,0 +1,54 @@
+---
+title: "useToolInfo"
+description: "Get metadata about the tool call that created this app."
+keywords: ["MCP Apps", "ChatGPT Apps", "React hooks", "tool info", "tool call", "metadata"]
+---
+
+<Badge color="yellow">sunpeak API</Badge>
+
+## Overview
+
+The `useToolInfo` hook returns metadata about the tool call that instantiated the current app. It is a convenience wrapper around `useHostContext`.
+
+## Import
+
+```tsx
+import { useToolInfo } from 'sunpeak';
+```
+
+## Signature
+
+```tsx
+function useToolInfo(): ToolInfo | undefined
+```
+
+## Returns
+
+<ResponseField name="return" type="ToolInfo | undefined">
+  Metadata about the tool call, or `undefined` if not available.
+
+  ```typescript
+  {
+    id?: RequestId;   // JSON-RPC id of the tools/call request
+    tool: Tool;       // Tool definition including name, inputSchema, etc.
+  }
+  ```
+</ResponseField>
+
+## Usage
+
+```tsx
+import { useToolInfo } from 'sunpeak';
+
+function MyResource() {
+  const toolInfo = useToolInfo();
+
+  return (
+    <div>
+      <p>Rendered by: {toolInfo?.tool.name ?? 'unknown tool'}</p>
+    </div>
+  );
+}
+```
+
+The tool info comes from [`McpUiHostContext.toolInfo`](/mcp-apps/types/core-types#mcpuihostcontext).

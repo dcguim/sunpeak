@@ -98,6 +98,16 @@ export interface SimulatorUrlParams {
    * Safe area inset from the right of the screen (in pixels).
    */
   safeAreaRight?: number;
+
+  /**
+   * Enable Prod Tools mode (real tool handlers instead of simulation mocks).
+   */
+  prodTools?: boolean;
+
+  /**
+   * Enable Prod Resources mode (production dist/ bundles instead of HMR).
+   */
+  prodResources?: boolean;
 }
 
 /**
@@ -181,6 +191,12 @@ export function createSimulatorUrl(params: SimulatorUrlParams, basePath = '/'): 
   }
   if (params.safeAreaRight !== undefined) {
     searchParams.set('safeAreaRight', String(params.safeAreaRight));
+  }
+  if (params.prodTools !== undefined) {
+    searchParams.set('prodTools', String(params.prodTools));
+  }
+  if (params.prodResources !== undefined) {
+    searchParams.set('prodResources', String(params.prodResources));
   }
   const queryString = searchParams.toString();
   return queryString ? `${basePath}?${queryString}` : basePath;

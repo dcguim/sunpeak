@@ -94,7 +94,7 @@ function startBuildWatcher(projectRoot, resourcesDir, mcpHandle, { skipInitialBu
     });
   };
 
-  // Initial build (skip when --built already ran a synchronous build)
+  // Initial build (skip when --prod-resources already ran a synchronous build)
   if (!skipInitialBuild) {
     runBuild();
   }
@@ -152,12 +152,12 @@ export async function dev(projectRoot = process.cwd(), args = []) {
   // Parse --no-begging flag
   const noBegging = args.includes('--no-begging');
 
-  // Parse --live and --built flags
-  const isLive = args.includes('--live');
-  const isBuilt = args.includes('--built');
+  // Parse --prod-tools and --prod-resources flags
+  const isProdTools = args.includes('--prod-tools');
+  const isProdResources = args.includes('--prod-resources');
 
-  if (isLive) console.log('Live mode enabled by default (toggle in simulator sidebar)');
-  if (isBuilt) console.log('Built mode: resources will use production-built HTML from dist/');
+  if (isProdTools) console.log('Prod Tools enabled by default (toggle in simulator sidebar)');
+  if (isProdResources) console.log('Prod Resources: resources will use production-built HTML from dist/');
 
   console.log(`Starting Vite dev server on port ${port}...`);
 
@@ -206,7 +206,7 @@ export async function dev(projectRoot = process.cwd(), args = []) {
     },
   });
 
-  // --live: Vite plugin that proxies callServerTool to real handlers
+  // Vite plugin that proxies callServerTool to real tool handlers
   const sunpeakCallToolPlugin = () => ({
     name: 'sunpeak-call-tool',
     configureServer(server) {
@@ -224,7 +224,7 @@ export async function dev(projectRoot = process.cwd(), args = []) {
         if (!toolEntry) {
           res.setHeader('Content-Type', 'application/json');
           res.end(JSON.stringify({
-            content: [{ type: 'text', text: `[Live] Tool "${name}" not found` }],
+            content: [{ type: 'text', text: `[Prod Tools] Tool "${name}" not found` }],
             isError: true,
           }));
           return;
@@ -236,7 +236,7 @@ export async function dev(projectRoot = process.cwd(), args = []) {
           if (typeof handler !== 'function') {
             res.setHeader('Content-Type', 'application/json');
             res.end(JSON.stringify({
-              content: [{ type: 'text', text: `[Live] Tool "${name}" has no default export handler` }],
+              content: [{ type: 'text', text: `[Prod Tools] Tool "${name}" has no default export handler` }],
               isError: true,
             }));
             return;
@@ -250,7 +250,7 @@ export async function dev(projectRoot = process.cwd(), args = []) {
         } catch (err) {
           res.setHeader('Content-Type', 'application/json');
           res.end(JSON.stringify({
-            content: [{ type: 'text', text: `[Live] Tool error: ${err.message}` }],
+            content: [{ type: 'text', text: `[Prod Tools] Tool error: ${err.message}` }],
             isError: true,
           }));
         }
@@ -258,16 +258,23 @@ export async function dev(projectRoot = process.cwd(), args = []) {
     },
   });
 
-  // --built: Vite plugin that serves production-built HTML from dist/
+  // Vite plugin that serves production-built HTML from dist/
   const sunpeakDistPlugin = () => ({
     name: 'sunpeak-dist',
     configureServer(server) {
       server.middlewares.use('/dist', (req, res, next) => {
         const filePath = join(projectRoot, 'dist', req.url);
-        if (existsSync(filePath) && filePath.endsWith('.html')) {
-          res.setHeader('Content-Type', 'text/html');
-          res.setHeader('Cache-Control', 'no-cache');
-          res.end(readFileSync(filePath));
+        if (filePath.endsWith('.html')) {
+          if (existsSync(filePath)) {
+            res.setHeader('Content-Type', 'text/html');
+            res.setHeader('Cache-Control', 'no-cache');
+            res.end(readFileSync(filePath));
+          } else {
+            // Return 404 instead of falling through to Vite's SPA fallback,
+            // which would serve the simulator's own index.html.
+            res.statusCode = 404;
+            res.end();
+          }
           return;
         }
         next();
@@ -283,11 +290,11 @@ export async function dev(projectRoot = process.cwd(), args = []) {
       tailwindcss(),
       sunpeakFaviconPlugin(),
       sunpeakCallToolPlugin(),
-      ...(isBuilt ? [sunpeakDistPlugin()] : []),
+      sunpeakDistPlugin(),
     ],
     define: {
-      '__SUNPEAK_LIVE__': JSON.stringify(isLive),
-      '__SUNPEAK_BUILT__': JSON.stringify(isBuilt),
+      '__SUNPEAK_PROD_TOOLS__': JSON.stringify(isProdTools),
+      '__SUNPEAK_PROD_RESOURCES__': JSON.stringify(isProdResources),
     },
     resolve: {
       alias: {
@@ -304,8 +311,8 @@ export async function dev(projectRoot = process.cwd(), args = []) {
     },
   });
 
-  // --built: Run initial production build so dist/ is ready before server starts
-  if (isBuilt) {
+  // --prod-resources: Run initial production build so dist/ is ready before server starts
+  if (isProdResources) {
     console.log('Building production resources...');
     const sunpeakBin = join(dirname(new URL(import.meta.url).pathname), '..', 'sunpeak.js');
     const { execSync } = await import('child_process');
@@ -375,7 +382,7 @@ export async function dev(projectRoot = process.cwd(), args = []) {
     logLevel: 'silent',
   });
 
-  // Build path map for live handler reloading (re-imports on each call for HMR).
+  // Build path map for prod-tools handler reloading (re-imports on each call for HMR).
   // Also do an initial load to validate handlers and populate toolHandlerMap for the MCP server.
   const toolPathMap = new Map();
   const toolHandlerMap = new Map();
@@ -437,8 +444,8 @@ export async function dev(projectRoot = process.cwd(), args = []) {
       } : {}),
       // Attach real handler for tools consumed by the MCP server.
       // Backend-only tools (no resource) always need handlers for callServerTool.
-      // UI tools only get handlers in --live mode (otherwise simulation mock data is used).
-      ...((toolHandlerMap.has(toolName) && (!resourceKey || isLive)) ? {
+      // UI tools only get handlers in --prod-tools mode (otherwise simulation mock data is used).
+      ...((toolHandlerMap.has(toolName) && (!resourceKey || isProdTools)) ? {
         handler: toolHandlerMap.get(toolName).handler,
       } : {}),
     });
@@ -531,7 +538,7 @@ if (import.meta.hot) {
       },
       server: {
         middlewareMode: true,
-        hmr: { port: 24679 },
+        hmr: { port: Number(process.env.SUNPEAK_HMR_PORT || 24679) },
         allowedHosts: true,
         watch: {
           // Only watch files that affect the UI bundle (not JSON, tests, etc.)
@@ -558,9 +565,9 @@ if (import.meta.hot) {
       version: pkg.version || '0.1.0',
       simulations,
       port: 8000,
-      // In --built mode, don't pass viteServer so the MCP server serves pre-built HTML.
+      // In --prod-resources mode, don't pass viteServer so the MCP server serves pre-built HTML.
       // Otherwise, pass it so ChatGPT gets Vite HMR.
-      viteServer: isBuilt ? undefined : mcpViteServer,
+      viteServer: isProdResources ? undefined : mcpViteServer,
     });
 
     // Build production bundles and watch for changes.
@@ -568,7 +575,7 @@ if (import.meta.hot) {
     // reach the local Vite dev server. The watcher rebuilds on source file changes
     // so the prod output stays fresh without manual `sunpeak build`.
     // On successful builds, mcpHandle.invalidateResources() notifies tunnel sessions.
-    startBuildWatcher(projectRoot, resourcesDir, mcpHandle, { skipInitialBuild: isBuilt });
+    startBuildWatcher(projectRoot, resourcesDir, mcpHandle, { skipInitialBuild: isProdResources });
 
     // Handle signals - close all servers
     process.on('SIGINT', async () => {

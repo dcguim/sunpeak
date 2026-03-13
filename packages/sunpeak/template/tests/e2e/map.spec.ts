@@ -101,6 +101,66 @@ for (const host of hosts) {
       });
     });
 
+    test.describe('Prod Tools Mode', () => {
+      test('should show empty state with Run button', async ({ page }) => {
+        await page.goto(
+          createSimulatorUrl({ simulation: 'show-map', theme: 'dark', host, prodTools: true })
+        );
+
+        const emptyState = page.locator('text=Press Run to call the tool');
+        await expect(emptyState).toBeVisible();
+
+        const runButton = page.locator('button:has-text("Run")');
+        await expect(runButton).toBeVisible();
+
+        const iframe = page.locator('iframe');
+        await expect(iframe).not.toBeAttached();
+      });
+
+      test('should have themed empty state colors in light mode', async ({ page }) => {
+        await page.goto(
+          createSimulatorUrl({ simulation: 'show-map', theme: 'light', host, prodTools: true })
+        );
+
+        const emptyState = page.locator('text=Press Run to call the tool');
+        await expect(emptyState).toBeVisible();
+
+        const color = await emptyState.evaluate((el) => {
+          return window.getComputedStyle(el).color;
+        });
+
+        const [r, g, b] = color.match(/\d+/g)!.map(Number);
+        expect(r + g + b).toBeLessThan(600);
+      });
+
+      test('should have themed empty state colors in dark mode', async ({ page }) => {
+        await page.goto(
+          createSimulatorUrl({ simulation: 'show-map', theme: 'dark', host, prodTools: true })
+        );
+
+        const emptyState = page.locator('text=Press Run to call the tool');
+        await expect(emptyState).toBeVisible();
+
+        const color = await emptyState.evaluate((el) => {
+          return window.getComputedStyle(el).color;
+        });
+
+        const [r, g, b] = color.match(/\d+/g)!.map(Number);
+        expect(r + g + b).toBeGreaterThan(200);
+      });
+    });
+
+    test.describe('Prod Resources Mode', () => {
+      test('should activate without errors', async ({ page }) => {
+        await page.goto(
+          createSimulatorUrl({ simulation: 'show-map', theme: 'dark', host, prodResources: true })
+        );
+
+        const root = page.locator('#root');
+        await expect(root).not.toBeEmpty();
+      });
+    });
+
     test.describe('Dark Mode', () => {
       test('should render map container with correct styles', async ({ page }) => {
         await page.goto(createSimulatorUrl({ simulation: 'show-map', theme: 'dark', host }));

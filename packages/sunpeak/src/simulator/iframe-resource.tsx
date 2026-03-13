@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useEffect, useRef, useMemo, useCallback, useState } from 'react';
+import { useEffect, useRef, useMemo, useCallback } from 'react';
 import { McpAppHost, type McpAppHostOptions } from './mcp-app-host';
 import { createMockOpenAIRuntime, MOCK_OPENAI_RUNTIME_SCRIPT } from './mock-openai-runtime';
 import type { McpUiHostContext, McpUiResourcePermissions } from '@modelcontextprotocol/ext-apps';
@@ -419,7 +419,6 @@ export function IframeResource({
 }: IframeResourceProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const hostRef = useRef<McpAppHost | null>(null);
-  const [loaded, setLoaded] = useState(false);
 
   // Determine which URL to validate
   const resourceUrl = src ?? scriptSrc;
@@ -501,7 +500,12 @@ export function IframeResource({
         // Cross-origin iframe — contentWindow access blocked
       }
     }
-    setLoaded(true);
+    // Fade in via direct DOM update — avoids a React state update from an
+    // async iframe load event (which triggers act() warnings in tests).
+    if (iframeRef.current) {
+      iframeRef.current.style.opacity = '1';
+      iframeRef.current.style.transition = 'opacity 100ms';
+    }
   }, [src, injectOpenAIRuntime, hostContext?.theme, hostContext?.styles]);
 
   // Sync mutable host options (e.g. onCallTool) into the existing host
@@ -603,8 +607,8 @@ export function IframeResource({
     ...borderStyle,
     background: 'transparent',
     colorScheme: hostContext?.theme === 'light' ? 'light dark' : 'dark light',
-    opacity: loaded ? 1 : 0,
-    transition: loaded ? 'opacity 100ms' : 'none',
+    // Start hidden; handleLoad fades in via direct DOM update
+    opacity: 0,
     width: '100%',
     // Start with minHeight to prevent collapse, but allow auto-resize to set actual height.
     // Don't use height: 100% as it requires explicit height in parent chain.

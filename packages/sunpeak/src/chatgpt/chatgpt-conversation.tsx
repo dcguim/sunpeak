@@ -106,20 +106,25 @@ export function Conversation({
           </div>
           {/* Spacer - pointer events pass through to content below */}
           <div className="flex-1" />
-          <footer
-            className="pointer-events-auto"
-            style={{
-              backgroundColor: 'var(--sim-bg-conversation, var(--color-background-primary))',
-            }}
-          >
-            <div className="max-w-[48rem] mx-auto px-4 py-4">
+          <footer className="relative">
+            {/* Backdrop blur gradient — matches inline input treatment */}
+            <div
+              className="absolute inset-x-0 bottom-0 h-full -z-10"
+              style={{
+                maskImage: 'linear-gradient(to bottom, transparent 0%, black 50%)',
+                WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 50%)',
+                backdropFilter: 'blur(16px)',
+                WebkitBackdropFilter: 'blur(16px)',
+              }}
+            />
+            <div className="max-w-[48rem] mx-auto px-4 pt-4 pb-4 pointer-events-auto">
               <div className="relative">
                 <input
                   type="text"
                   name="userInput"
                   disabled
                   placeholder="Message sunpeak.ai"
-                  className="w-full rounded-3xl px-5 py-3 pr-12 shadow-md"
+                  className="w-full rounded-3xl px-5 py-3 pr-12 shadow-sm"
                   style={{
                     backgroundColor: 'var(--sim-bg-reply-input, var(--color-background-secondary))',
                     color: 'var(--color-text-primary)',
@@ -151,7 +156,7 @@ export function Conversation({
         className="flex flex-col flex-1 w-full transition-all duration-200 overflow-hidden"
         style={{ maxWidth: containerWidth }}
       >
-        <main className="flex-1 overflow-y-auto overflow-x-hidden">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col">
           {/* User turn - hidden in fullscreen */}
           {!isFullscreen && (
             <article className="w-full focus:outline-none" dir="auto" data-turn="user">
@@ -181,8 +186,8 @@ export function Conversation({
             </article>
           )}
 
-          {/* Assistant turn */}
-          <article className="w-full focus:outline-none" dir="auto" data-turn="assistant">
+          {/* Assistant turn — flex-1 so short content still pushes the input to the bottom */}
+          <article className="w-full focus:outline-none flex-1" dir="auto" data-turn="assistant">
             <h6 className="sr-only">{appName} said:</h6>
             <div className="text-base my-auto mx-auto pb-10 px-4">
               <div className="max-w-[48rem] mx-auto flex-1 relative flex w-full min-w-0 flex-col">
@@ -281,33 +286,41 @@ export function Conversation({
               </div>
             </div>
           </article>
-        </main>
 
-        {/* Input area - hidden in fullscreen since fullscreen chrome has its own footer */}
-        {!isFullscreen && (
-          <footer
-            style={{
-              backgroundColor: 'var(--sim-bg-conversation, var(--color-background-primary))',
-            }}
-          >
-            <div className="max-w-[48rem] mx-auto px-4 py-4">
-              <div className="relative">
-                <input
-                  type="text"
-                  name="userInput"
-                  disabled
-                  placeholder="Message sunpeak.ai"
-                  className="w-full rounded-3xl px-5 py-3 pr-12 shadow-md"
-                  style={{
-                    backgroundColor: 'var(--sim-bg-reply-input, var(--color-background-secondary))',
-                    color: 'var(--color-text-primary)',
-                    border: '1px solid var(--color-border-tertiary)',
-                  }}
-                />
+          {/* Input area - sticky at bottom, content scrolls underneath with blur.
+              Hidden in fullscreen since fullscreen chrome has its own footer. */}
+          {!isFullscreen && (
+            <div className="sticky bottom-0 z-10 pointer-events-none">
+              {/* Backdrop blur gradient — fades from transparent to blurred */}
+              <div
+                className="absolute inset-x-0 bottom-0 h-full -z-10"
+                style={{
+                  maskImage: 'linear-gradient(to bottom, transparent 0%, black 50%)',
+                  WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 50%)',
+                  backdropFilter: 'blur(16px)',
+                  WebkitBackdropFilter: 'blur(16px)',
+                }}
+              />
+              <div className="max-w-[48rem] mx-auto px-4 pt-4 pb-4 pointer-events-auto">
+                <div className="relative">
+                  <input
+                    type="text"
+                    name="userInput"
+                    disabled
+                    placeholder="Message sunpeak.ai"
+                    className="w-full rounded-3xl px-5 py-3 pr-12 shadow-sm"
+                    style={{
+                      backgroundColor:
+                        'var(--sim-bg-reply-input, var(--color-background-secondary))',
+                      color: 'var(--color-text-primary)',
+                      border: '1px solid var(--color-border-tertiary)',
+                    }}
+                  />
+                </div>
               </div>
             </div>
-          </footer>
-        )}
+          )}
+        </main>
       </div>
     </div>
   );

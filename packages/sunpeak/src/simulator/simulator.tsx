@@ -38,15 +38,17 @@ export interface SimulatorProps {
   appIcon?: string;
   /** Which host shell to use initially. Defaults to 'chatgpt'. */
   defaultHost?: HostId;
-  /** Override callServerTool resolution. When provided, bypasses simulation serverTools mocks (e.g., for --live mode). */
+  /** Override callServerTool resolution. When provided, bypasses simulation serverTools mocks (e.g., for --prod-tools mode). */
   onCallTool?: (params: {
     name: string;
     arguments?: Record<string, unknown>;
   }) => Promise<CallToolResult> | CallToolResult;
-  /** Initial live mode state. Defaults to false. */
-  defaultLive?: boolean;
-  /** Hide the Live mode toggle in the sidebar (e.g., for marketing/embedded use). */
-  hideLiveToggle?: boolean;
+  /** Initial prod-tools mode state. Defaults to false. */
+  defaultProdTools?: boolean;
+  /** Initial prod-resources mode state. When true, resources load from dist/ instead of HMR. Defaults to false. */
+  defaultProdResources?: boolean;
+  /** Hide Prod Tools and Prod Resources toggles in the sidebar (e.g., for marketing/embedded use). */
+  hideSimulatorModes?: boolean;
 }
 
 type Platform = 'mobile' | 'desktop' | 'web';
@@ -58,27 +60,37 @@ export function Simulator({
   appIcon,
   defaultHost = 'chatgpt',
   onCallTool,
-  defaultLive = false,
-  hideLiveToggle = false,
+  defaultProdTools = false,
+  defaultProdResources = false,
+  hideSimulatorModes = false,
 }: SimulatorProps) {
   const state = useSimulatorState({ simulations, defaultHost });
-  const [live, setLive] = React.useState(defaultLive);
+  const [prodTools, setProdTools] = React.useState(state.urlProdTools ?? defaultProdTools);
+  const [prodResources, setProdResources] = React.useState(
+    state.urlProdResources ?? defaultProdResources
+  );
   const [isRunning, setIsRunning] = React.useState(false);
   const [hasRun, setHasRun] = React.useState(false);
   const [showCheck, setShowCheck] = React.useState(false);
   const checkTimerRef = React.useRef<ReturnType<typeof setTimeout>>(undefined);
 
-  // Reset hasRun when tool selection changes in live mode
+  // Reset hasRun when tool selection changes in prod-tools mode.
+  // When switching back to simulation mode, restore the simulation's tool result.
   React.useEffect(() => {
-    if (live) setHasRun(false);
-  }, [live, state.selectedSimulationName]);
+    if (prodTools) {
+      setHasRun(false);
+    } else {
+      const simResult = (state.selectedSim?.toolResult as CallToolResult | undefined) ?? undefined;
+      state.setToolResult(simResult);
+    }
+  }, [prodTools, state.selectedSimulationName]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Cleanup check timer
   React.useEffect(() => () => clearTimeout(checkTimerRef.current), []);
 
-  // In live mode, deduplicate simulations by tool name for the Tool dropdown
+  // In prod-tools mode, deduplicate simulations by tool name for the Tool dropdown
   const toolOptions = React.useMemo(() => {
-    if (!live) return [];
+    if (!prodTools) return [];
     const seen = new Map<string, string>(); // toolName → first simulationName
     for (const simName of state.simulationNames) {
       const sim = simulations[simName];
@@ -91,7 +103,7 @@ export function Simulator({
       value: simName,
       label: (simulations[simName].tool.title as string | undefined) || toolName,
     }));
-  }, [live, state.simulationNames, simulations]);
+  }, [prodTools, state.simulationNames, simulations]);
 
   // Run button handler: call the real tool handler with current toolInput
   const handleRun = React.useCallback(async () => {
@@ -175,7 +187,7 @@ export function Simulator({
     }
   }, [activeShell]);
 
-  // Handle callServerTool from the iframe. When onCallTool is provided (--live mode),
+  // Handle callServerTool from the iframe. When onCallTool is provided (prod-tools mode),
   // forward to real tool handlers. Otherwise resolve from simulation serverTools mocks.
   const handleCallTool = React.useCallback(
     (params: {
@@ -202,17 +214,77 @@ export function Simulator({
     [onCallTool, state.selectedSim, state.selectedSimulationName]
   );
 
-  // In live mode, derive user message from the selected tool
-  const liveUserMessage =
-    live && state.selectedSim
+  // In prod-tools mode, derive user message from the selected tool
+  const prodToolsUserMessage =
+    prodTools && state.selectedSim
       ? `Call my ${(state.selectedSim.tool.title as string | undefined) || state.selectedSim.tool.name} tool`
       : undefined;
+
+  // When prod-resources mode is on, override the resource URL to point at dist/ HTML.
+  // The resource name comes from the simulation's resource metadata.
+  // We verify the dist file exists via a HEAD request to avoid loading the
+  // dev server's SPA fallback (which would render a nested simulator).
+  const prodResourcesPath = React.useMemo(() => {
+    if (!prodResources || !state.selectedSim?.resource) return undefined;
+    const name = state.selectedSim.resource.name as string;
+    return `/dist/${name}/${name}.html`;
+  }, [prodResources, state.selectedSim?.resource]);
+
+  // Continuously poll the dist file while prod-resources mode is active.
+  // Detects file disappearing (rebuild started → "Building…") and
+  // reappearing (rebuild finished → load iframe). A generation counter
+  // increments on each ready transition to force an iframe remount.
+  const [prodResourcesReady, setProdResourcesReady] = React.useState(false);
+  const [prodResourcesGeneration, setProdResourcesGeneration] = React.useState(0);
+  const prodResourcesWasReady = React.useRef(false);
+  React.useEffect(() => {
+    if (!prodResourcesPath) {
+      setProdResourcesReady(false);
+      prodResourcesWasReady.current = false;
+      return;
+    }
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout>;
+
+    const check = async () => {
+      let ok = false;
+      try {
+        const res = await fetch(prodResourcesPath, { method: 'HEAD' });
+        ok = res.ok;
+      } catch {
+        // network error → not ready
+      }
+      if (cancelled) return;
+      if (ok) {
+        if (!prodResourcesWasReady.current) {
+          // Transition: not ready → ready. Bump generation to remount iframe.
+          setProdResourcesGeneration((g) => g + 1);
+        }
+        prodResourcesWasReady.current = true;
+        setProdResourcesReady(true);
+      } else {
+        prodResourcesWasReady.current = false;
+        setProdResourcesReady(false);
+      }
+      timer = setTimeout(check, 1000);
+    };
+
+    check();
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [prodResourcesPath]);
+
+  const effectiveResourceUrl =
+    (prodResourcesPath && prodResourcesReady ? prodResourcesPath : undefined) ?? state.resourceUrl;
+  const prodResourcesLoading = !!prodResourcesPath && !prodResourcesReady;
 
   // Build content.
   // The wrapper div stays mounted across key changes, providing a themed
   // background while the iframe (opacity: 0) loads new content.
-  // In live mode, show empty state until the tool has been run.
-  const showEmptyState = live && !hasRun;
+  // In prod-tools mode, show empty state until the tool has been run.
+  const showEmptyState = prodTools && !hasRun;
   let content: React.ReactNode;
   const iframeBg = 'var(--sim-bg-conversation, var(--color-background-primary, transparent))';
   if (showEmptyState) {
@@ -226,15 +298,25 @@ export function Simulator({
         </span>
       </div>
     );
-  } else if (state.resourceUrl) {
+  } else if (prodResourcesLoading) {
+    content = (
+      <div
+        className="h-full w-full flex items-center justify-center"
+        style={{ background: iframeBg }}
+      >
+        <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+          Building&hellip;
+        </span>
+      </div>
+    );
+  } else if (effectiveResourceUrl) {
     content = (
       <div className="h-full w-full" style={{ background: iframeBg }}>
         <IframeResource
-          key={`${state.activeHost}-${state.selectedSimulationName}`}
-          src={state.resourceUrl}
+          key={`${state.activeHost}-${state.selectedSimulationName}-${prodResources}-${prodResourcesGeneration}`}
+          src={effectiveResourceUrl}
           hostContext={hostContext}
           toolInput={state.toolInput}
-          toolInputPartial={state.toolInputPartial}
           toolResult={state.effectiveToolResult}
           hostOptions={{
             hostInfo: activeShell?.hostInfo,
@@ -252,7 +334,7 @@ export function Simulator({
         />
       </div>
     );
-  } else if (state.resourceScript) {
+  } else if (!prodResources && state.resourceScript) {
     content = (
       <div className="h-full w-full" style={{ background: iframeBg }}>
         <IframeResource
@@ -260,7 +342,6 @@ export function Simulator({
           scriptSrc={state.resourceScript}
           hostContext={hostContext}
           toolInput={state.toolInput}
-          toolInputPartial={state.toolInputPartial}
           toolResult={state.effectiveToolResult}
           csp={state.csp}
           hostOptions={{
@@ -289,30 +370,71 @@ export function Simulator({
   return (
     <ThemeProvider theme={state.theme} applyTheme={applyTheme}>
       <SimpleSidebar
-        headerRight={
-          !hideLiveToggle && onCallTool ? (
-            <SidebarCheckbox checked={live} onChange={setLive} label="Live" />
-          ) : undefined
-        }
         controls={
           <div className="space-y-1">
-            {/* ── Host selector ── */}
-            {registeredHosts.length > 1 && (
-              <SidebarControl label="Host">
-                <SidebarSelect
-                  value={state.activeHost}
-                  onChange={(value) => state.setActiveHost(value as HostId)}
-                  options={registeredHosts.map((h) => ({
-                    value: h.id,
-                    label: h.label,
-                  }))}
-                />
-              </SidebarControl>
+            {/* ── Dev mode toggles ── */}
+            {!hideSimulatorModes && onCallTool && (
+              <SidebarCheckbox
+                checked={prodTools}
+                onChange={setProdTools}
+                label="Prod Tools"
+                tooltip="Use real tool handlers instead of simulations"
+                docsPath="api-reference/cli/dev#prod-tools-and-prod-resources-flags"
+              />
+            )}
+            {!hideSimulatorModes && (
+              <SidebarCheckbox
+                checked={prodResources}
+                onChange={setProdResources}
+                label="Prod Resources"
+                tooltip="Load resources from dist/ builds instead of HMR"
+                docsPath="api-reference/cli/dev#prod-tools-and-prod-resources-flags"
+              />
             )}
 
+            {/* ── Host + Width row ── */}
+            <div className="grid grid-cols-2 gap-2">
+              {registeredHosts.length > 1 && (
+                <SidebarControl
+                  label="Host"
+                  tooltip="Host runtime to simulate"
+                  docsPath="api-reference/hooks/platform-detection"
+                >
+                  <SidebarSelect
+                    value={state.activeHost}
+                    onChange={(value) => state.setActiveHost(value as HostId)}
+                    options={registeredHosts.map((h) => ({
+                      value: h.id,
+                      label: h.label,
+                    }))}
+                  />
+                </SidebarControl>
+              )}
+              <SidebarControl
+                label="Width"
+                tooltip="Chat width"
+                docsPath="api-reference/simulations/simulator"
+              >
+                <SidebarSelect
+                  value={state.screenWidth}
+                  onChange={(value) => state.setScreenWidth(value as ScreenWidth)}
+                  options={[
+                    { value: 'mobile-s', label: 'Mobile S (375px)' },
+                    { value: 'mobile-l', label: 'Mobile L (425px)' },
+                    { value: 'tablet', label: 'Tablet (768px)' },
+                    { value: 'full', label: '100% (Full)' },
+                  ]}
+                />
+              </SidebarControl>
+            </div>
+
             {/* ── Tool / Simulation selector ── */}
-            {live && toolOptions.length > 1 && (
-              <SidebarControl label="Tool">
+            {prodTools && toolOptions.length > 1 && (
+              <SidebarControl
+                label="Tool"
+                tooltip="Tool to call with prod handler"
+                docsPath="api-reference/cli/dev"
+              >
                 <SidebarSelect
                   value={state.selectedSimulationName}
                   onChange={(value) => state.setSelectedSimulationName(value)}
@@ -320,8 +442,12 @@ export function Simulator({
                 />
               </SidebarControl>
             )}
-            {!live && state.simulationNames.length > 1 && (
-              <SidebarControl label="Simulation">
+            {!prodTools && state.simulationNames.length > 1 && (
+              <SidebarControl
+                label="Simulation"
+                tooltip="Test fixture to render"
+                docsPath="api-reference/simulations/simulation"
+              >
                 <SidebarSelect
                   value={state.selectedSimulationName}
                   onChange={(value) => state.setSelectedSimulationName(value)}
@@ -340,33 +466,47 @@ export function Simulator({
               </SidebarControl>
             )}
 
-            <SidebarControl label="Width">
-              <SidebarSelect
-                value={state.screenWidth}
-                onChange={(value) => state.setScreenWidth(value as ScreenWidth)}
-                options={[
-                  { value: 'mobile-s', label: 'Mobile S (375px)' },
-                  { value: 'mobile-l', label: 'Mobile L (425px)' },
-                  { value: 'tablet', label: 'Tablet (768px)' },
-                  { value: 'full', label: '100% (Full)' },
-                ]}
-              />
-            </SidebarControl>
-
-            <SidebarCollapsibleControl label="Host Context" defaultCollapsed={false}>
+            <SidebarCollapsibleControl
+              label="Host Context"
+              defaultCollapsed={false}
+              tooltip="Host-provided environment"
+              docsPath="api-reference/hooks/use-host-context"
+            >
               <div className="space-y-1">
-                <SidebarControl label="Theme">
-                  <SidebarToggle
-                    value={state.theme}
-                    onChange={(value) => state.setTheme(value as McpUiTheme)}
-                    options={[
-                      { value: 'light', label: 'Light' },
-                      { value: 'dark', label: 'Dark' },
-                    ]}
-                  />
-                </SidebarControl>
+                <div className="grid grid-cols-[2fr_1fr] gap-2">
+                  <SidebarControl
+                    label="Theme"
+                    tooltip="Host color theme"
+                    docsPath="api-reference/hooks/use-theme"
+                  >
+                    <SidebarToggle
+                      value={state.theme}
+                      onChange={(value) => state.setTheme(value as McpUiTheme)}
+                      options={[
+                        { value: 'light', label: 'Light' },
+                        { value: 'dark', label: 'Dark' },
+                      ]}
+                    />
+                  </SidebarControl>
 
-                <SidebarControl label="Display Mode">
+                  <SidebarControl
+                    label="Locale"
+                    tooltip="BCP 47 language tag"
+                    docsPath="api-reference/hooks/use-locale"
+                  >
+                    <SidebarInput
+                      value={state.locale}
+                      onChange={(value) => state.setLocale(value)}
+                      placeholder="en-US"
+                    />
+                  </SidebarControl>
+                </div>
+
+                <SidebarControl
+                  label="Display Mode"
+                  tooltip="Host resource rendering paradigm"
+                  docsPath="api-reference/hooks/use-display-mode"
+                >
                   <SidebarToggle
                     value={state.displayMode}
                     onChange={(value) => state.setDisplayMode(value as McpUiDisplayMode)}
@@ -378,95 +518,130 @@ export function Simulator({
                   />
                 </SidebarControl>
 
-                <div className="grid grid-cols-2 gap-2">
-                  <SidebarControl label="Locale">
-                    <SidebarInput
-                      value={state.locale}
-                      onChange={(value) => state.setLocale(value)}
-                      placeholder="e.g. en-US"
-                    />
-                  </SidebarControl>
+                <div className="grid grid-cols-7 gap-2">
+                  <div className="col-span-3">
+                    <SidebarControl
+                      label="Platform"
+                      tooltip="End user device platform"
+                      docsPath="api-reference/hooks/use-platform"
+                    >
+                      <SidebarSelect
+                        value={state.platform}
+                        onChange={(value) => {
+                          const p = value as Platform;
+                          state.setPlatform(p);
+                          if (p === 'mobile') {
+                            state.setHover(false);
+                            state.setTouch(true);
+                          } else if (p === 'desktop') {
+                            state.setHover(true);
+                            state.setTouch(false);
+                          } else {
+                            state.setHover(true);
+                            state.setTouch(false);
+                          }
+                        }}
+                        options={[
+                          { value: 'mobile', label: 'Mobile' },
+                          { value: 'desktop', label: 'Desktop' },
+                          { value: 'web', label: 'Web' },
+                        ]}
+                      />
+                    </SidebarControl>
+                  </div>
 
-                  <SidebarControl label="Max Height (PiP)">
-                    <SidebarInput
-                      type="number"
-                      value={
-                        state.displayMode === 'pip' && state.containerMaxHeight !== undefined
-                          ? String(state.containerMaxHeight)
-                          : ''
-                      }
-                      onChange={(value) => {
-                        if (state.displayMode === 'pip') {
-                          state.setContainerMaxHeight(value ? Number(value) : 480);
-                        }
-                      }}
-                      placeholder={state.displayMode === 'pip' ? '480' : '-'}
-                      disabled={state.displayMode !== 'pip'}
-                    />
-                  </SidebarControl>
+                  <div className="col-span-4">
+                    <SidebarControl
+                      label="Capabilities"
+                      tooltip="End user device capabilities"
+                      docsPath="api-reference/hooks/use-device-capabilities"
+                    >
+                      <div className="flex gap-2">
+                        <SidebarCheckbox
+                          checked={state.hover}
+                          onChange={state.setHover}
+                          label="Hover"
+                        />
+                        <SidebarCheckbox
+                          checked={state.touch}
+                          onChange={state.setTouch}
+                          label="Touch"
+                        />
+                      </div>
+                    </SidebarControl>
+                  </div>
                 </div>
 
-                <SidebarControl label="Platform">
-                  <SidebarSelect
-                    value={state.platform}
-                    onChange={(value) => {
-                      const p = value as Platform;
-                      state.setPlatform(p);
-                      if (p === 'mobile') {
-                        state.setHover(false);
-                        state.setTouch(true);
-                      } else if (p === 'desktop') {
-                        state.setHover(true);
-                        state.setTouch(false);
-                      } else {
-                        state.setHover(true);
-                        state.setTouch(false);
-                      }
-                    }}
-                    options={[
-                      { value: 'mobile', label: 'Mobile' },
-                      { value: 'desktop', label: 'Desktop' },
-                      { value: 'web', label: 'Web' },
-                    ]}
+                <SidebarControl
+                  label="Time Zone"
+                  tooltip="End user IANA time zone"
+                  docsPath="api-reference/hooks/use-time-zone"
+                >
+                  <SidebarInput
+                    value={state.timeZone}
+                    onChange={(value) => state.setTimeZone(value)}
+                    placeholder="e.g. America/New_York"
                   />
                 </SidebarControl>
 
-                <div className="pl-4">
-                  <SidebarControl label="Device Capabilities">
-                    <div className="flex gap-2">
-                      <SidebarCheckbox
-                        checked={state.hover}
-                        onChange={state.setHover}
-                        label="Hover"
+                <SidebarControl
+                  label="Container Dimensions"
+                  tooltip="Host-enforced size constraints (px)"
+                  docsPath="api-reference/hooks/use-viewport"
+                >
+                  <div className="grid grid-cols-4 gap-1">
+                    <SidebarControl label="Height">
+                      <SidebarInput
+                        type="number"
+                        placeholder="-"
+                        value={state.containerHeight != null ? String(state.containerHeight) : ''}
+                        onChange={(value) =>
+                          state.setContainerHeight(value ? Number(value) : undefined)
+                        }
                       />
-                      <SidebarCheckbox
-                        checked={state.touch}
-                        onChange={state.setTouch}
-                        label="Touch"
+                    </SidebarControl>
+                    <SidebarControl label="Width">
+                      <SidebarInput
+                        type="number"
+                        placeholder="-"
+                        value={state.containerWidth != null ? String(state.containerWidth) : ''}
+                        onChange={(value) =>
+                          state.setContainerWidth(value ? Number(value) : undefined)
+                        }
                       />
-                    </div>
-                  </SidebarControl>
-                </div>
+                    </SidebarControl>
+                    <SidebarControl label="Max H">
+                      <SidebarInput
+                        type="number"
+                        placeholder="-"
+                        value={
+                          state.containerMaxHeight != null ? String(state.containerMaxHeight) : ''
+                        }
+                        onChange={(value) =>
+                          state.setContainerMaxHeight(value ? Number(value) : undefined)
+                        }
+                      />
+                    </SidebarControl>
+                    <SidebarControl label="Max W">
+                      <SidebarInput
+                        type="number"
+                        placeholder="-"
+                        value={
+                          state.containerMaxWidth != null ? String(state.containerMaxWidth) : ''
+                        }
+                        onChange={(value) =>
+                          state.setContainerMaxWidth(value ? Number(value) : undefined)
+                        }
+                      />
+                    </SidebarControl>
+                  </div>
+                </SidebarControl>
 
-                <div className="grid grid-cols-2 gap-2">
-                  <SidebarControl label="Time Zone">
-                    <SidebarInput
-                      value={state.timeZone}
-                      onChange={(value) => state.setTimeZone(value)}
-                      placeholder="e.g. America/New_York"
-                    />
-                  </SidebarControl>
-
-                  <SidebarControl label="User Agent">
-                    <SidebarInput
-                      value={state.userAgent}
-                      onChange={(value) => state.setUserAgent(value)}
-                      placeholder="Navigator user agent"
-                    />
-                  </SidebarControl>
-                </div>
-
-                <SidebarControl label="Safe Area Insets">
+                <SidebarControl
+                  label="Safe Area Insets"
+                  tooltip="Device safe area padding (px)"
+                  docsPath="api-reference/hooks/use-safe-area"
+                >
                   <div className="grid grid-cols-4 gap-1">
                     <div className="flex items-center gap-0.5">
                       <span
@@ -477,9 +652,10 @@ export function Simulator({
                       </span>
                       <SidebarInput
                         type="number"
-                        value={String(state.safeAreaInsets.top)}
+                        placeholder="-"
+                        value={state.safeAreaInsets.top ? String(state.safeAreaInsets.top) : ''}
                         onChange={(value) =>
-                          state.setSafeAreaInsets((prev) => ({ ...prev, top: Number(value) }))
+                          state.setSafeAreaInsets((prev) => ({ ...prev, top: Number(value) || 0 }))
                         }
                       />
                     </div>
@@ -492,9 +668,15 @@ export function Simulator({
                       </span>
                       <SidebarInput
                         type="number"
-                        value={String(state.safeAreaInsets.bottom)}
+                        placeholder="-"
+                        value={
+                          state.safeAreaInsets.bottom ? String(state.safeAreaInsets.bottom) : ''
+                        }
                         onChange={(value) =>
-                          state.setSafeAreaInsets((prev) => ({ ...prev, bottom: Number(value) }))
+                          state.setSafeAreaInsets((prev) => ({
+                            ...prev,
+                            bottom: Number(value) || 0,
+                          }))
                         }
                       />
                     </div>
@@ -507,9 +689,10 @@ export function Simulator({
                       </span>
                       <SidebarInput
                         type="number"
-                        value={String(state.safeAreaInsets.left)}
+                        placeholder="-"
+                        value={state.safeAreaInsets.left ? String(state.safeAreaInsets.left) : ''}
                         onChange={(value) =>
-                          state.setSafeAreaInsets((prev) => ({ ...prev, left: Number(value) }))
+                          state.setSafeAreaInsets((prev) => ({ ...prev, left: Number(value) || 0 }))
                         }
                       />
                     </div>
@@ -522,9 +705,13 @@ export function Simulator({
                       </span>
                       <SidebarInput
                         type="number"
-                        value={String(state.safeAreaInsets.right)}
+                        placeholder="-"
+                        value={state.safeAreaInsets.right ? String(state.safeAreaInsets.right) : ''}
                         onChange={(value) =>
-                          state.setSafeAreaInsets((prev) => ({ ...prev, right: Number(value) }))
+                          state.setSafeAreaInsets((prev) => ({
+                            ...prev,
+                            right: Number(value) || 0,
+                          }))
                         }
                       />
                     </div>
@@ -533,7 +720,12 @@ export function Simulator({
               </div>
             </SidebarCollapsibleControl>
 
-            <SidebarCollapsibleControl label="App Context" defaultCollapsed>
+            <SidebarCollapsibleControl
+              label="App Context"
+              defaultCollapsed
+              tooltip="App-provided context shared with the model"
+              docsPath="api-reference/hooks/use-app-state"
+            >
               <SidebarTextarea
                 value={state.modelContextJson}
                 onChange={(json) =>
@@ -551,9 +743,11 @@ export function Simulator({
             </SidebarCollapsibleControl>
 
             <SidebarCollapsibleControl
-              key={`tool-input-${live}`}
+              key={`tool-input-${prodTools}`}
               label="Tool Input (JSON)"
-              defaultCollapsed={!live}
+              defaultCollapsed={!prodTools}
+              tooltip="Arguments passed to the tool"
+              docsPath="api-reference/hooks/use-tool-data"
             >
               <SidebarTextarea
                 value={state.toolInputJson}
@@ -569,23 +763,15 @@ export function Simulator({
                 error={state.toolInputError}
                 maxRows={8}
               />
-              <button
-                type="button"
-                onClick={state.sendToolInputPartial}
-                disabled={!!state.toolInputError}
-                className="mt-1 w-full rounded px-2 py-1 text-xs disabled:opacity-40 cursor-pointer"
-                style={{
-                  backgroundColor: 'var(--color-background-tertiary)',
-                  color: 'var(--color-text-secondary)',
-                  border: '1px solid var(--color-border-primary)',
-                }}
-              >
-                Send as Partial (Streaming)
-              </button>
             </SidebarCollapsibleControl>
 
-            {!live && (
-              <SidebarCollapsibleControl label="Tool Result (JSON)" defaultCollapsed={false}>
+            {!prodTools && (
+              <SidebarCollapsibleControl
+                label="Tool Result (JSON)"
+                defaultCollapsed={false}
+                tooltip="Structured content returned by the tool"
+                docsPath="api-reference/hooks/use-tool-data"
+              >
                 <SidebarTextarea
                   value={state.toolResultJson}
                   onChange={(json) =>
@@ -624,10 +810,10 @@ export function Simulator({
             onRequestDisplayMode={state.handleDisplayModeChange}
             appName={appName}
             appIcon={appIcon}
-            userMessage={liveUserMessage ?? state.selectedSim?.userMessage}
+            userMessage={prodToolsUserMessage ?? state.selectedSim?.userMessage}
             isTransitioning={state.isTransitioning}
             headerAction={
-              live && onCallTool ? (
+              prodTools && onCallTool ? (
                 <button
                   type="button"
                   onClick={handleRun}

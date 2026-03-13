@@ -44,8 +44,14 @@ export interface SimulatorState {
   setDisplayMode: (mode: McpUiDisplayMode) => void;
   locale: string;
   setLocale: (locale: string) => void;
-  containerMaxHeight: number;
-  setContainerMaxHeight: (height: number) => void;
+  containerHeight: number | undefined;
+  setContainerHeight: (height: number | undefined) => void;
+  containerWidth: number | undefined;
+  setContainerWidth: (width: number | undefined) => void;
+  containerMaxHeight: number | undefined;
+  setContainerMaxHeight: (height: number | undefined) => void;
+  containerMaxWidth: number | undefined;
+  setContainerMaxWidth: (width: number | undefined) => void;
   platform: Platform;
   setPlatform: (platform: Platform) => void;
   hover: boolean;
@@ -58,9 +64,6 @@ export interface SimulatorState {
   >;
   timeZone: string;
   setTimeZone: (tz: string) => void;
-  userAgent: string;
-  setUserAgent: (ua: string) => void;
-
   // ── Computed host context ──
   hostContext: McpUiHostContext;
 
@@ -112,10 +115,6 @@ export interface SimulatorState {
   handleDisplayModeChange: (mode: McpUiDisplayMode) => void;
   handleUpdateModelContext: (content: unknown[], structuredContent?: unknown) => void;
 
-  // ── Streaming tool input ──
-  toolInputPartial: Record<string, unknown> | undefined;
-  sendToolInputPartial: () => void;
-
   // ── Content props (for IframeResource) ──
   resourceUrl: string | undefined;
   resourceScript: string | undefined;
@@ -124,6 +123,10 @@ export interface SimulatorState {
   prefersBorder: boolean;
   domain: string | undefined;
   hasIframeContent: boolean;
+
+  // ── URL param overrides ──
+  urlProdTools: boolean | undefined;
+  urlProdResources: boolean | undefined;
 }
 
 /**
@@ -133,12 +136,15 @@ export interface SimulatorState {
  * - theme: 'light' | 'dark'
  * - displayMode: 'inline' | 'pip' | 'fullscreen'
  * - locale: e.g., 'en-US'
- * - maxHeight: number (for pip mode)
+ * - maxHeight: number (containerDimensions.maxHeight)
+ * - maxWidth: number (containerDimensions.maxWidth)
  * - deviceType: 'mobile' | 'tablet' | 'desktop' → maps to platform
  * - hover: 'true' | 'false'
  * - touch: 'true' | 'false'
  * - safeAreaTop, safeAreaBottom, safeAreaLeft, safeAreaRight: number
  * - host: 'chatgpt' | 'claude'
+ * - prodTools: 'true' | 'false'
+ * - prodResources: 'true' | 'false'
  */
 function parseUrlParams(): {
   simulation?: string;
@@ -146,10 +152,13 @@ function parseUrlParams(): {
   displayMode?: McpUiDisplayMode;
   locale?: string;
   containerMaxHeight?: number;
+  containerMaxWidth?: number;
   platform?: Platform;
   deviceCapabilities?: { hover?: boolean; touch?: boolean };
   safeAreaInsets?: { top: number; bottom: number; left: number; right: number };
   host?: HostId;
+  prodTools?: boolean;
+  prodResources?: boolean;
 } {
   if (typeof window === 'undefined') return {};
 
@@ -161,7 +170,17 @@ function parseUrlParams(): {
   const locale = params.get('locale');
   const maxHeightParam = params.get('maxHeight');
   const containerMaxHeight = maxHeightParam ? Number(maxHeightParam) : undefined;
+  const maxWidthParam = params.get('maxWidth');
+  const containerMaxWidth = maxWidthParam ? Number(maxWidthParam) : undefined;
   const host = (params.get('host') as HostId) ?? undefined;
+
+  // Prod modes
+  const prodToolsParam = params.get('prodTools');
+  const prodTools =
+    prodToolsParam === 'true' ? true : prodToolsParam === 'false' ? false : undefined;
+  const prodResourcesParam = params.get('prodResources');
+  const prodResources =
+    prodResourcesParam === 'true' ? true : prodResourcesParam === 'false' ? false : undefined;
 
   // Map deviceType param to MCP Apps platform
   const deviceType = params.get('deviceType');
@@ -204,10 +223,13 @@ function parseUrlParams(): {
     displayMode: displayMode ?? undefined,
     locale: locale ?? undefined,
     containerMaxHeight,
+    containerMaxWidth,
     platform,
     deviceCapabilities,
     safeAreaInsets,
     host: host ?? undefined,
+    prodTools,
+    prodResources,
   };
 }
 
@@ -254,7 +276,14 @@ export function useSimulatorState({
     urlParams.displayMode ?? DEFAULT_DISPLAY_MODE
   );
   const [locale, setLocale] = useState(urlParams.locale ?? 'en-US');
-  const [containerMaxHeight, setContainerMaxHeight] = useState(urlParams.containerMaxHeight ?? 480);
+  const [containerHeight, setContainerHeight] = useState<number | undefined>(undefined);
+  const [containerWidth, setContainerWidth] = useState<number | undefined>(undefined);
+  const [containerMaxHeight, setContainerMaxHeight] = useState<number | undefined>(
+    urlParams.containerMaxHeight
+  );
+  const [containerMaxWidth, setContainerMaxWidth] = useState<number | undefined>(
+    urlParams.containerMaxWidth
+  );
   const [platform, setPlatform] = useState<Platform>(urlParams.platform ?? DEFAULT_PLATFORM);
   const [hover, setHover] = useState(urlParams.deviceCapabilities?.hover ?? true);
   const [touch, setTouch] = useState(urlParams.deviceCapabilities?.touch ?? false);
@@ -262,9 +291,6 @@ export function useSimulatorState({
     urlParams.safeAreaInsets ?? { top: 0, bottom: 0, left: 0, right: 0 }
   );
   const [timeZone, setTimeZone] = useState(() => Intl.DateTimeFormat().resolvedOptions().timeZone);
-  const [userAgent, setUserAgent] = useState(() =>
-    typeof navigator !== 'undefined' ? navigator.userAgent : ''
-  );
 
   // Display mode setter that respects mobile width constraints
   const setDisplayMode = (mode: McpUiDisplayMode) => {
@@ -285,29 +311,44 @@ export function useSimulatorState({
   }, []);
 
   // Build host context from state
+  const containerDimensions = useMemo(() => {
+    if (
+      containerHeight == null &&
+      containerWidth == null &&
+      containerMaxHeight == null &&
+      containerMaxWidth == null
+    )
+      return undefined;
+    return {
+      ...(containerHeight != null ? { height: containerHeight } : {}),
+      ...(containerWidth != null ? { width: containerWidth } : {}),
+      ...(containerMaxHeight != null ? { maxHeight: containerMaxHeight } : {}),
+      ...(containerMaxWidth != null ? { maxWidth: containerMaxWidth } : {}),
+    };
+  }, [containerHeight, containerWidth, containerMaxHeight, containerMaxWidth]);
+
   const hostContext = useMemo<McpUiHostContext>(
     () => ({
       theme,
       displayMode,
+      availableDisplayModes: ['inline', 'pip', 'fullscreen'],
       locale,
       timeZone,
-      userAgent,
       platform,
       deviceCapabilities: { hover, touch },
       safeAreaInsets,
-      ...(displayMode === 'pip' ? { containerDimensions: { maxHeight: containerMaxHeight } } : {}),
+      ...(containerDimensions ? { containerDimensions } : {}),
     }),
     [
       theme,
       displayMode,
       locale,
       timeZone,
-      userAgent,
       platform,
       hover,
       touch,
       safeAreaInsets,
-      containerMaxHeight,
+      containerDimensions,
     ]
   );
 
@@ -435,22 +476,6 @@ export function useSimulatorState({
   const hasIframeContent = !!(resourceUrl || resourceScript);
   const isTransitioning = hasIframeContent && displayMode !== readyDisplayMode;
 
-  // ── Streaming tool input partial ──
-  const [toolInputPartial, setToolInputPartial] = useState<Record<string, unknown> | undefined>(
-    undefined
-  );
-
-  const sendToolInputPartial = useCallback(() => {
-    try {
-      const parsed = JSON.parse(toolInputJson);
-      if (parsed && typeof parsed === 'object') {
-        setToolInputPartial(parsed as Record<string, unknown>);
-      }
-    } catch {
-      // Invalid JSON, ignore
-    }
-  }, [toolInputJson]);
-
   return {
     simulationNames,
     selectedSimulationName,
@@ -469,8 +494,14 @@ export function useSimulatorState({
     setDisplayMode,
     locale,
     setLocale,
+    containerHeight,
+    setContainerHeight,
+    containerWidth,
+    setContainerWidth,
     containerMaxHeight,
     setContainerMaxHeight,
+    containerMaxWidth,
+    setContainerMaxWidth,
     platform,
     setPlatform,
     hover,
@@ -481,8 +512,6 @@ export function useSimulatorState({
     setSafeAreaInsets,
     timeZone,
     setTimeZone,
-    userAgent,
-    setUserAgent,
 
     hostContext,
 
@@ -520,9 +549,6 @@ export function useSimulatorState({
     handleDisplayModeChange,
     handleUpdateModelContext,
 
-    toolInputPartial,
-    sendToolInputPartial,
-
     resourceUrl,
     resourceScript,
     csp,
@@ -530,5 +556,8 @@ export function useSimulatorState({
     prefersBorder,
     domain,
     hasIframeContent,
+
+    urlProdTools: urlParams.prodTools,
+    urlProdResources: urlParams.prodResources,
   };
 }

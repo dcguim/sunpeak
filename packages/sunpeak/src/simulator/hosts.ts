@@ -31,7 +31,7 @@ export interface HostConversationProps {
   userMessage?: string;
   /** Whether content is transitioning between display modes */
   isTransitioning?: boolean;
-  /** Optional action element rendered in the conversation header (e.g., Run button in --live mode) */
+  /** Optional action element rendered in the conversation header (e.g., Run button in Prod Tools mode) */
   headerAction?: React.ReactNode;
 }
 

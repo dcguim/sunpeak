@@ -1,10 +1,14 @@
 import {
-  useApp,
   useAppState,
   useToolData,
-  useHostContext,
+  useDeviceCapabilities,
+  useHostInfo,
   useDisplayMode,
+  useRequestDisplayMode,
   useCallServerTool,
+  useUpdateModelContext,
+  useTimeZone,
+  useLocale,
   SafeArea,
 } from 'sunpeak';
 import type { ResourceConfig } from 'sunpeak';
@@ -494,12 +498,10 @@ function AlertBanner({ alert }: { alert: Alert }) {
 // ============================================================================
 
 export function ReviewResource() {
-  const app = useApp();
-
-  const { output } = useToolData<unknown, ReviewData>(undefined, {
-    title: 'Review',
-    sections: [],
-  });
+  const { output, isLoading, isError, isCancelled, cancelReason } = useToolData<
+    unknown,
+    ReviewData
+  >();
 
   const [state, setState] = useAppState<ReviewState>({
     decision: null,
@@ -509,27 +511,37 @@ export function ReviewResource() {
     serverError: false,
   });
 
-  const context = useHostContext();
+  const { touch: hasTouch = false } = useDeviceCapabilities();
+  const { hostCapabilities } = useHostInfo();
   const displayMode = useDisplayMode();
+  const { requestDisplayMode, availableModes } = useRequestDisplayMode();
+  const callServerTool = useCallServerTool();
+  const updateModelContext = useUpdateModelContext();
+  const timeZone = useTimeZone();
+  const locale = useLocale();
 
-  const hasTouch = context?.deviceCapabilities?.touch ?? false;
+  const canFullscreen = availableModes?.includes('fullscreen') ?? false;
+  const hasServerTools = !!hostCapabilities?.serverTools;
   const decision = state.decision ?? null;
   const isFullscreen = displayMode === 'fullscreen';
   const data = output ?? { title: 'Review', sections: [] as Section[] };
 
   const handleRequestFullscreen = () => {
-    app?.requestDisplayMode({ mode: 'fullscreen' });
+    requestDisplayMode('fullscreen');
   };
-
-  const callServerTool = useCallServerTool();
 
   const handleDecision = async (confirmed: boolean) => {
     const decidedAt = new Date().toISOString();
     const decision = confirmed ? 'accepted' : 'rejected';
 
+    // Inform the model about the user's decision
+    updateModelContext({
+      structuredContent: { decision, title: data.title, decidedAt },
+    });
+
     const tool = data.reviewTool;
-    if (!tool) {
-      // No server tool — show result immediately
+    if (!tool || !hasServerTools) {
+      // No server tool or host doesn't support server tools — show result immediately
       setState({ decision, decidedAt, pending: false, serverMessage: null, serverError: false });
       return;
     }
@@ -568,58 +580,71 @@ export function ReviewResource() {
   const sections = data.sections ?? [];
   const alerts = data.alerts ?? [];
 
+  if (isLoading) {
+    return (
+      <SafeArea className="flex items-center justify-center gap-2 p-8 text-[var(--color-text-secondary)]">
+        <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+        <span>Loading…</span>
+      </SafeArea>
+    );
+  }
+
+  if (isError) {
+    return (
+      <SafeArea className="flex items-center justify-center p-8 text-[var(--color-text-secondary)]">
+        Failed to load review data
+      </SafeArea>
+    );
+  }
+
+  if (isCancelled) {
+    return (
+      <SafeArea className="flex items-center justify-center p-8 text-[var(--color-text-secondary)]">
+        {cancelReason ?? 'Request was cancelled'}
+      </SafeArea>
+    );
+  }
+
   return (
-    <SafeArea className="flex flex-col">
+    <SafeArea className="px-4 py-4 space-y-4">
       {/* Header */}
-      <div className="px-4 pt-4 pb-3 border-b border-[var(--color-border-tertiary)]">
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex-1 min-w-0">
-            <h1 className="text-xl font-semibold text-[var(--color-text-primary)]">{data.title}</h1>
-            {data.description && (
-              <p className="mt-1 text-sm text-[var(--color-text-secondary)]">{data.description}</p>
-            )}
-          </div>
-          {!isFullscreen && (
-            <Button
-              variant="ghost"
-              color="secondary"
-              size="sm"
-              onClick={handleRequestFullscreen}
-              aria-label="Enter fullscreen"
-              className="flex-shrink-0"
-            >
-              <ExpandLg className="h-4 w-4" aria-hidden="true" />
-            </Button>
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1 min-w-0">
+          <h1 className="text-xl font-semibold text-[var(--color-text-primary)]">{data.title}</h1>
+          {data.description && (
+            <p className="mt-1 text-sm text-[var(--color-text-secondary)]">{data.description}</p>
           )}
         </div>
-      </div>
-
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
-        {/* Alerts */}
-        {alerts.length > 0 && (
-          <div className="space-y-2">
-            {alerts.map((alert, i) => (
-              <AlertBanner key={i} alert={alert} />
-            ))}
-          </div>
-        )}
-
-        {/* Sections */}
-        {sections.length === 0 ? (
-          // Note: Apps cannot distinguish between "still loading" and "empty response".
-          // We show a loading state as the optimistic assumption.
-          <div className="flex items-center justify-center gap-2 py-8 text-[var(--color-text-secondary)]">
-            <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-            <span>Loading...</span>
-          </div>
-        ) : (
-          sections.map((section, i) => <SectionRenderer key={i} section={section} />)
+        {!isFullscreen && canFullscreen && (
+          <Button
+            variant="ghost"
+            color="secondary"
+            size="sm"
+            onClick={handleRequestFullscreen}
+            aria-label="Enter fullscreen"
+            className="flex-shrink-0"
+          >
+            <ExpandLg className="h-4 w-4" aria-hidden="true" />
+          </Button>
         )}
       </div>
 
-      {/* Footer with Actions */}
-      <div className="px-4 py-3 border-t border-[var(--color-border-tertiary)]">
+      {/* Alerts */}
+      {alerts.length > 0 && (
+        <div className="space-y-2">
+          {alerts.map((alert, i) => (
+            <AlertBanner key={i} alert={alert} />
+          ))}
+        </div>
+      )}
+
+      {/* Sections */}
+      {sections.map((section, i) => (
+        <SectionRenderer key={i} section={section} />
+      ))}
+
+      {/* Actions */}
+      <div className="pt-2">
         {decision === null ? (
           <div className="flex gap-3">
             <Button
@@ -652,11 +677,9 @@ export function ReviewResource() {
           <div className="flex flex-col items-center gap-1">
             {state.serverMessage ? (
               <>
-                {/* What the user clicked */}
                 <span className="text-xs text-[var(--color-text-secondary)]">
                   {decision === 'accepted' ? acceptedMessage : rejectedMessage}
                 </span>
-                {/* Server's result — color based on structuredContent.status */}
                 <div
                   className="flex items-center justify-center gap-2"
                   style={{
@@ -670,7 +693,6 @@ export function ReviewResource() {
                 </div>
               </>
             ) : (
-              /* No server message (no reviewTool) — icon based on decision */
               <div
                 className="flex items-center justify-center gap-2"
                 style={{
@@ -688,7 +710,7 @@ export function ReviewResource() {
             )}
             {state.decidedAt && (
               <span className="text-xs text-[var(--color-text-secondary)]">
-                {new Date(state.decidedAt).toLocaleString()}
+                {new Date(state.decidedAt).toLocaleString(locale, { timeZone })}
               </span>
             )}
           </div>

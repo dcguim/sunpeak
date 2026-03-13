@@ -3,24 +3,9 @@ import { describe, it, expect, vi } from 'vitest';
 import { FullscreenViewer } from './fullscreen-viewer';
 import type { Album } from './albums';
 
-// Mock sunpeak — SafeArea renders as a plain div
-vi.mock('sunpeak', () => ({
-  SafeArea: vi.fn(
-    ({
-      children,
-      className,
-      ...props
-    }: {
-      children: React.ReactNode;
-      className?: string;
-      [key: string]: unknown;
-    }) => (
-      <div data-testid="safe-area" className={className} {...props}>
-        {children}
-      </div>
-    )
-  ),
-}));
+// Mock sunpeak (no longer used directly by FullscreenViewer, but may be
+// pulled in transitively)
+vi.mock('sunpeak', () => ({}));
 
 describe('FullscreenViewer', () => {
   const mockAlbum: Album = {
@@ -87,12 +72,5 @@ describe('FullscreenViewer', () => {
     // Should not render any img element in the main photo area
     const images = container.querySelectorAll('img');
     expect(images.length).toBe(0);
-  });
-
-  it('wraps content in SafeArea', () => {
-    const { container } = render(<FullscreenViewer album={mockAlbum} />);
-
-    const safeArea = container.querySelector('[data-testid="safe-area"]');
-    expect(safeArea).toBeInTheDocument();
   });
 });

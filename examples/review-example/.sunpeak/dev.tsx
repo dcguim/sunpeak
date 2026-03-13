@@ -18,32 +18,22 @@ import resourceComponents from '../src/resources';
 const { Simulator, buildDevSimulations } = simulator;
 
 // Compile-time flags injected by sunpeak dev (via Vite define)
-declare const __SUNPEAK_LIVE__: boolean;
-declare const __SUNPEAK_BUILT__: boolean;
+declare const __SUNPEAK_PROD_TOOLS__: boolean;
+declare const __SUNPEAK_PROD_RESOURCES__: boolean | undefined;
 
 // Build simulations from discovered files
 const simulations = buildDevSimulations({
   simulationModules: import.meta.glob('../tests/simulations/*.json', { eager: true }),
   resourceComponents: resourceComponents as Record<string, React.ComponentType>,
-  toolModules: import.meta.glob('../src/tools/*.ts', { eager: true }),
+  toolModules: import.meta.glob(['../src/tools/*.ts', '!../src/tools/*.test.ts'], { eager: true }),
   resourceModules: import.meta.glob(
     ['../src/resources/*/*.tsx', '!../src/resources/*/*.test.tsx'],
     { eager: true }
   ),
 });
 
-// --built: Override resource URLs to use production-built HTML from dist/
-if (__SUNPEAK_BUILT__) {
-  for (const sim of Object.values(simulations)) {
-    if (sim.resource && sim.resourceUrl) {
-      const resourceName = sim.resource.name as string;
-      sim.resourceUrl = `/dist/${resourceName}/${resourceName}.html`;
-    }
-  }
-}
-
 // Forward callServerTool to real handlers via dev server endpoint.
-// Always available — the Live checkbox in the sidebar controls whether it's used.
+// Always available — the Prod Tools checkbox in the sidebar controls whether it's used.
 const onCallTool = async (params: {
   name: string;
   arguments?: Record<string, unknown>;
@@ -72,7 +62,8 @@ root.render(
       appName={appName}
       appIcon={appIcon}
       onCallTool={onCallTool}
-      defaultLive={__SUNPEAK_LIVE__}
+      defaultProdTools={__SUNPEAK_PROD_TOOLS__}
+      defaultProdResources={!!__SUNPEAK_PROD_RESOURCES__}
     />
   </StrictMode>
 );

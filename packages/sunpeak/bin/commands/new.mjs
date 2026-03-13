@@ -191,9 +191,9 @@ export async function init(projectName, resourcesArg, deps = defaultDeps) {
             return false;
           }
         }
-        // Skip tool files for excluded resources: src/tools/*.ts
+        // Skip tool files (and their tests) for excluded resources: src/tools/*.ts
         if (src.includes('/src/tools/') && name.endsWith('.ts')) {
-          const baseName = name.replace(/\.ts$/, '');
+          const baseName = name.replace(/\.(test\.)?ts$/, '');
           if (baseName === resource || baseName.startsWith(resource + '-') || baseName.endsWith('-' + resource)) {
             return false;
           }

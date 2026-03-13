@@ -1,4 +1,5 @@
 import { forwardRef, type HTMLAttributes, type ReactNode } from 'react';
+import { useDisplayMode } from './use-display-mode';
 import { useSafeArea } from './use-safe-area';
 import { useViewport } from './use-viewport';
 
@@ -7,10 +8,14 @@ export interface SafeAreaProps extends HTMLAttributes<HTMLDivElement> {
 }
 
 /**
- * Wrapper component that applies safe-area padding and viewport maxHeight.
+ * Wrapper component that applies safe-area padding and viewport constraints.
  *
  * Replaces the common boilerplate of calling `useSafeArea()` + `useViewport()`
- * and manually applying padding/maxHeight styles on a container div.
+ * and manually applying padding/maxHeight/maxWidth styles on a container div.
+ *
+ * In fullscreen mode, SafeArea fills the iframe viewport (`100dvh`) so that
+ * flex column layouts (e.g. sticky header / scrollable content / sticky footer)
+ * work correctly without each resource having to handle display mode sizing.
  *
  * @example
  * ```tsx
@@ -31,6 +36,12 @@ export const SafeArea = forwardRef<HTMLDivElement, SafeAreaProps>(function SafeA
 ) {
   const safeArea = useSafeArea();
   const viewport = useViewport();
+  const displayMode = useDisplayMode();
+
+  // In fullscreen, fill the iframe viewport so flex layouts work.
+  // In inline/pip, use viewport.height if set by the host.
+  const isFullscreen = displayMode === 'fullscreen';
+  const height = viewport?.height ?? (isFullscreen ? '100dvh' : undefined);
 
   return (
     <div
@@ -42,7 +53,10 @@ export const SafeArea = forwardRef<HTMLDivElement, SafeAreaProps>(function SafeA
         paddingBottom: safeArea.bottom || undefined,
         paddingLeft: safeArea.left || undefined,
         paddingRight: safeArea.right || undefined,
+        height,
         maxHeight: viewport?.maxHeight,
+        width: viewport?.width,
+        maxWidth: viewport?.maxWidth,
         ...style,
       }}
       {...props}
