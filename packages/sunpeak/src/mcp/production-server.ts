@@ -262,10 +262,6 @@ export function createProductionMcpServer(config: ProductionServerConfig): McpSe
   let toolCount = 0;
 
   for (const tool of tools) {
-    // Get the resource for this tool (if any) for use in callback
-    const toolResourceName = tool.tool.resource;
-    const toolResource = toolResourceName ? resourceByName.get(toolResourceName) : undefined;
-
     // Build the handler callback (shared by UI and plain tools)
     const makeCallback = () => {
       return async (
@@ -286,25 +282,6 @@ export function createProductionMcpServer(config: ProductionServerConfig): McpSe
         // Normalize string returns to CallToolResult
         if (typeof result === 'string') {
           return { content: [{ type: 'text' as const, text: result }] };
-        }
-
-        // For tools with resources, ensure the result includes the resource reference
-        // This is critical for ChatGPT to know which UI to render
-        if (toolResource && 'structuredContent' in result) {
-          const existingMeta = (result as Record<string, unknown>)._meta as Record<string, unknown> | undefined;
-          const existingUi = existingMeta?.ui as Record<string, unknown> | undefined;
-
-          // Only add if not already present
-          if (!existingUi?.resourceUri) {
-            (result as Record<string, unknown>)._meta = {
-              ...existingMeta,
-              ui: {
-                ...existingUi,
-                resourceUri: toolResource.uri,
-              },
-            };
-            log('info', `Added resourceUri to tool result: ${toolResource.uri}`);
-          }
         }
 
         return result;
@@ -338,14 +315,6 @@ export function createProductionMcpServer(config: ProductionServerConfig): McpSe
             const readMeta = serverUrl
               ? injectDefaultDomain(resolved, clientName, serverUrl)
               : resolved;
-            // Debug logging for resource read
-            log('info', `ReadResource: ${res.name}`, {
-              clientName,
-              serverUrl,
-              hasDomain: !!(readMeta as Record<string, unknown>)?.ui &&
-                !!((readMeta as Record<string, unknown>).ui as Record<string, unknown>)?.domain,
-              domain: ((readMeta as Record<string, unknown>)?.ui as Record<string, unknown>)?.domain,
-            });
             return {
               contents: [
                 {
