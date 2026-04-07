@@ -143,6 +143,17 @@ export interface ProductionServerConfig {
    * where holding open SSE connections is unreliable. Defaults to `true`.
    */
   enableJsonResponse?: boolean;
+  /**
+   * Override the client name used for domain resolution (e.g. `'chatgpt'`).
+   *
+   * Normally, client name is detected from the MCP initialization handshake.
+   * In stateless/serverless environments where each request creates a fresh
+   * server instance, the client name won't be available for non-initialize
+   * requests. Set this to ensure proper domain resolution for resources.
+   *
+   * Common values: `'chatgpt'`, `'openai-mcp'`, `'claude'`
+   */
+  clientName?: string;
 }
 
 /**
@@ -194,6 +205,7 @@ export function createProductionMcpServer(config: ProductionServerConfig): McpSe
     tools,
     resources,
     serverUrl,
+    clientName: configClientName,
   } = config;
 
   const mcpServer = new McpServer(
@@ -218,9 +230,11 @@ export function createProductionMcpServer(config: ProductionServerConfig): McpSe
   // Read callbacks close over this variable to resolve host-specific domain maps.
   // Also update listing-level _meta on all resources so that `resources/list`
   // returns the resolved domain (hosts like ChatGPT check domain from the listing).
-  let clientName: string | undefined;
+  // In stateless/serverless mode, use configClientName as the default since
+  // oninitialized won't fire for non-initialize requests.
+  let clientName: string | undefined = configClientName;
   mcpServer.server.oninitialized = () => {
-    clientName = mcpServer.server.getClientVersion()?.name;
+    clientName = mcpServer.server.getClientVersion()?.name ?? configClientName;
 
     for (const handle of resourceHandles) {
       const currentMeta = handle.metadata?._meta as Record<string, unknown> | undefined;
@@ -248,6 +262,10 @@ export function createProductionMcpServer(config: ProductionServerConfig): McpSe
   let toolCount = 0;
 
   for (const tool of tools) {
+    // Get the resource for this tool (if any) for use in callback
+    const toolResourceName = tool.tool.resource;
+    const toolResource = toolResourceName ? resourceByName.get(toolResourceName) : undefined;
+
     // Build the handler callback (shared by UI and plain tools)
     const makeCallback = () => {
       return async (
@@ -269,6 +287,26 @@ export function createProductionMcpServer(config: ProductionServerConfig): McpSe
         if (typeof result === 'string') {
           return { content: [{ type: 'text' as const, text: result }] };
         }
+
+        // For tools with resources, ensure the result includes the resource reference
+        // This is critical for ChatGPT to know which UI to render
+        if (toolResource && 'structuredContent' in result) {
+          const existingMeta = (result as Record<string, unknown>)._meta as Record<string, unknown> | undefined;
+          const existingUi = existingMeta?.ui as Record<string, unknown> | undefined;
+
+          // Only add if not already present
+          if (!existingUi?.resourceUri) {
+            (result as Record<string, unknown>)._meta = {
+              ...existingMeta,
+              ui: {
+                ...existingUi,
+                resourceUri: toolResource.uri,
+              },
+            };
+            log('info', `Added resourceUri to tool result: ${toolResource.uri}`);
+          }
+        }
+
         return result;
       };
     };
@@ -300,6 +338,14 @@ export function createProductionMcpServer(config: ProductionServerConfig): McpSe
             const readMeta = serverUrl
               ? injectDefaultDomain(resolved, clientName, serverUrl)
               : resolved;
+            // Debug logging for resource read
+            log('info', `ReadResource: ${res.name}`, {
+              clientName,
+              serverUrl,
+              hasDomain: !!(readMeta as Record<string, unknown>)?.ui &&
+                !!((readMeta as Record<string, unknown>).ui as Record<string, unknown>)?.domain,
+              domain: ((readMeta as Record<string, unknown>)?.ui as Record<string, unknown>)?.domain,
+            });
             return {
               contents: [
                 {
