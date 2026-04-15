@@ -543,6 +543,7 @@ describe('CLI Commands', () => {
       mkdirSync: vi.fn(),
       execSync: vi.fn(),
       cwd: () => '/test/project',
+      isTTY: () => true,
       intro: vi.fn(),
       outro: vi.fn(),
       confirm: vi.fn().mockResolvedValue(false),
@@ -625,6 +626,37 @@ describe('CLI Commands', () => {
       expect(logInfoMock).toHaveBeenCalledWith(
         'Skill install skipped. Install later: pnpm dlx skills add Sunpeak-AI/sunpeak@test-mcp-server'
       );
+    });
+
+    it('should skip interactive prompts without a TTY', async () => {
+      const { testInit } = await importTestInit();
+      const confirmMock = vi.fn().mockResolvedValue(true);
+      const selectProvidersMock = vi.fn().mockResolvedValue([]);
+      const selectMock = vi.fn().mockResolvedValue('later');
+      const writeFileSync = vi.fn();
+
+      await testInit(
+        [],
+        createTestInitDeps({
+          isTTY: () => false,
+          confirm: confirmMock,
+          selectProviders: selectProvidersMock,
+          select: selectMock,
+          writeFileSync,
+        })
+      );
+
+      // Server config prompt, eval providers, and skill install should all be skipped
+      expect(selectMock).not.toHaveBeenCalled();
+      expect(selectProvidersMock).not.toHaveBeenCalled();
+      expect(confirmMock).not.toHaveBeenCalled();
+
+      // But the scaffold should still be created (with "configure later" default)
+      const configCall = writeFileSync.mock.calls.find(([path]: [string]) =>
+        path.includes('playwright.config.ts')
+      );
+      expect(configCall).toBeDefined();
+      expect(configCall[1]).toContain('// TODO: Configure your MCP server');
     });
 
     it('should detect sunpeak project type', async () => {
@@ -747,9 +779,9 @@ describe('CLI Commands', () => {
       const evalConfig = getWrittenContent(writeFileSync, 'evals/eval.config.ts');
       expect(evalConfig).toContain('http://localhost:8000/mcp');
 
-      // Live config has NOTE for non-sunpeak projects
+      // Live config has server option for non-sunpeak projects
       const liveConfig = getWrittenContent(writeFileSync, 'live/playwright.config.ts');
-      expect(liveConfig).toContain('NOTE:');
+      expect(liveConfig).toContain("server: { url: 'http://localhost:8000/mcp' }");
       expect(liveConfig).toContain("from 'sunpeak/test/live/config'");
     });
 
@@ -827,9 +859,9 @@ describe('CLI Commands', () => {
       const config = getWrittenContent(writeFileSync, 'project/playwright.config.ts');
       expect(config).toContain('defineConfig()');
 
-      // Live config should NOT have NOTE (this IS a sunpeak project)
+      // Live config should NOT have server option (this IS a sunpeak project)
       const liveConfig = getWrittenContent(writeFileSync, 'live/playwright.config.ts');
-      expect(liveConfig).not.toContain('NOTE:');
+      expect(liveConfig).not.toContain('server:');
 
       // Eval config has sunpeak-specific comment
       const evalConfig = getWrittenContent(writeFileSync, 'evals/eval.config.ts');
