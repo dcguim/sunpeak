@@ -43,6 +43,12 @@ export type { SafeAreaProps } from './safe-area';
 // === Action hooks (wrap App methods) ===
 export { useCallServerTool } from './use-call-server-tool';
 export type { CallServerToolParams, CallServerToolResult } from './use-call-server-tool';
+export { useCreateSamplingMessage } from './use-create-sampling-message';
+export type {
+  CreateSamplingMessageParams,
+  CreateMessageResult,
+  CreateMessageResultWithTools,
+} from './use-create-sampling-message';
 export { useDownloadFile } from './use-download-file';
 export type { DownloadFileParams, DownloadFileResult } from './use-download-file';
 export { useListServerResources } from './use-list-server-resources';
@@ -58,6 +64,8 @@ export type {
   ReadServerResourceParams,
   ReadServerResourceResult,
 } from './use-read-server-resource';
+export { useRegisterTool } from './use-register-tool';
+export type { RegisterToolConfig } from './use-register-tool';
 export { useRequestDisplayMode } from './use-request-display-mode';
 export { useRequestTeardown } from './use-request-teardown';
 export type { AppDisplayMode } from './use-request-display-mode';
@@ -65,6 +73,7 @@ export { useSendLog } from './use-send-log';
 export type { LogLevel, SendLogParams } from './use-send-log';
 export { useSendMessage } from './use-send-message';
 export type { SendMessageParams, MessageContent } from './use-send-message';
+export { useSendToolListChanged } from './use-send-tool-list-changed';
 export { useUpdateModelContext } from './use-update-model-context';
 export type { UpdateModelContextParams } from './use-update-model-context';
 

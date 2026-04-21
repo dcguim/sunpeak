@@ -1,0 +1,49 @@
+---
+title: "useSendToolListChanged"
+description: "Notify the host that the app's tool list changed."
+keywords: ["MCP Apps", "ChatGPT Apps", "React hooks", "tools", "tool list changed"]
+---
+
+<Badge color="yellow">sunpeak API</Badge>
+
+## Overview
+
+Returns a function to notify the host that the app's available tools have changed. Call this after registering, removing, enabling, or disabling tools via [`useRegisterTool`](/app-framework/hooks/use-register-tool).
+
+## Import
+
+```tsx
+import { useSendToolListChanged } from 'sunpeak';
+```
+
+## Signature
+
+```tsx
+function useSendToolListChanged(): () => Promise<void>
+```
+
+## Returns
+
+<ResponseField name="sendToolListChanged" type="() => Promise<void>">
+  Function that sends a `tools/list_changed` notification to the host.
+</ResponseField>
+
+## Usage
+
+```tsx
+import { useRegisterTool, useSendToolListChanged } from 'sunpeak';
+
+function DynamicTools() {
+  const registerTool = useRegisterTool();
+  const sendToolListChanged = useSendToolListChanged();
+
+  const addTool = () => {
+    registerTool("ping", { description: "Ping" }, () => ({
+      content: [{ type: "text", text: "pong" }],
+    }));
+    sendToolListChanged();
+  };
+
+  return <button onClick={addTool}>Add Tool</button>;
+}
+```

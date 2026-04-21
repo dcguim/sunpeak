@@ -272,6 +272,8 @@ All hooks are imported from `sunpeak`:
 | `useIsMobile()` | `boolean` | True if viewport is mobile-sized |
 | `useApp()` | `App \| null` | Raw [MCP App](https://sunpeak.ai/docs/mcp-apps/mcp/overview) instance for direct SDK calls |
 | `useCallServerTool()` | `(params) => Promise<result>` | Returns a function to call a server-side tool by name |
+| `useCreateSamplingMessage()` | `(params) => Promise<result>` | Request LLM completions from the host via sampling/createMessage |
+| `useRegisterTool()` | `(name, config, cb) => handle` | Register app-side tools the host can call; returns handle with enable/disable/remove |
 | `useSendMessage()` | `(params) => Promise<void>` | Returns a function to send a message to the conversation |
 | `useOpenLink()` | `(params) => Promise<void>` | Returns a function to open a URL through the host |
 | `useRequestDisplayMode()` | `{ requestDisplayMode, availableModes }` | Request `'inline'`, `'pip'`, or `'fullscreen'`; check `availableModes` first |
@@ -280,6 +282,7 @@ All hooks are imported from `sunpeak`:
 | `useListServerResources()` | `(params?) => Promise<result>` | List available resources on the MCP server |
 | `useUpdateModelContext()` | `(params) => Promise<void>` | Push state to the host's model context directly |
 | `useSendLog()` | `(params) => Promise<void>` | Send debug log to host |
+| `useSendToolListChanged()` | `() => Promise<void>` | Notify host that app's tool list changed (after register/remove/enable/disable) |
 | `useHostInfo()` | `{ hostVersion, hostCapabilities }` | Host name, version, and supported capabilities |
 | `useTeardown(fn)` | `void` | Register a teardown handler |
 | `useAppTools(config)` | `void` | Register tools the app provides to the host (bidirectional tool calling) |

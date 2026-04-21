@@ -1,0 +1,106 @@
+---
+title: "useRegisterTool"
+description: "Register app-side tools the host can call."
+keywords: ["MCP Apps", "ChatGPT Apps", "React hooks", "tools", "register tool", "bidirectional"]
+---
+
+<Badge color="yellow">sunpeak API</Badge>
+
+## Overview
+
+Returns a function to register tools that the host (or LLM) can call. Uses Standard Schema (Zod, ArkType, Valibot) for input/output validation. The returned handle supports `enable()`, `disable()`, `remove()`, and `update()`.
+
+For simpler static tool registration, see [`useAppTools`](/app-framework/hooks/use-app-tools). `useRegisterTool` provides lower-level control with dynamic registration and Standard Schema support.
+
+## Import
+
+```tsx
+import { useRegisterTool } from 'sunpeak';
+```
+
+## Signature
+
+```tsx
+function useRegisterTool(): (
+  name: string,
+  config: RegisterToolConfig,
+  cb: AppToolCallback
+) => RegisteredAppTool | undefined
+```
+
+### RegisterToolConfig
+
+<ResponseField name="title" type="string">
+  Human-readable title for the tool.
+</ResponseField>
+
+<ResponseField name="description" type="string">
+  Description of what the tool does.
+</ResponseField>
+
+<ResponseField name="inputSchema" type="StandardSchemaV1">
+  Input validation schema (Zod, ArkType, Valibot, etc.).
+</ResponseField>
+
+<ResponseField name="outputSchema" type="StandardSchemaV1">
+  Output validation schema.
+</ResponseField>
+
+<ResponseField name="annotations" type="ToolAnnotations">
+  Tool annotations (readOnly, destructive, idempotent hints).
+</ResponseField>
+
+## Returns
+
+<ResponseField name="registerTool" type="(name, config, cb) => RegisteredAppTool | undefined">
+  Function to register a tool. Returns `undefined` if app is not connected.
+</ResponseField>
+
+### RegisteredAppTool
+
+<ResponseField name="enable()" type="() => void">
+  Enable the tool.
+</ResponseField>
+
+<ResponseField name="disable()" type="() => void">
+  Disable the tool.
+</ResponseField>
+
+<ResponseField name="remove()" type="() => void">
+  Remove the tool registration.
+</ResponseField>
+
+<ResponseField name="update()" type="(updates) => void">
+  Update the tool configuration.
+</ResponseField>
+
+## Usage
+
+```tsx
+import { useRegisterTool, useSendToolListChanged } from 'sunpeak';
+import { useEffect } from 'react';
+
+function SelectionTool({ selectedText }: { selectedText: string }) {
+  const registerTool = useRegisterTool();
+  const sendToolListChanged = useSendToolListChanged();
+
+  useEffect(() => {
+    const handle = registerTool(
+      "get_selection",
+      { description: "Get the user's current text selection" },
+      () => ({
+        content: [{ type: "text", text: selectedText }],
+      })
+    );
+    if (handle) {
+      sendToolListChanged();
+      return () => {
+        handle.remove();
+        sendToolListChanged();
+      };
+    }
+  }, [registerTool, sendToolListChanged, selectedText]);
+
+  return <div>Selection tool registered</div>;
+}
+```

@@ -77,7 +77,7 @@ packages/sunpeak/
 │   ├── claude/               # Claude host shell
 │   │   ├── claude-conversation.tsx   # Claude conversation chrome
 │   │   └── claude-host.ts    # Host registration (theme, capabilities)
-│   ├── hooks/                # React hooks (useApp, useHostContext, useToolData, useAppState, useUpdateModelContext, useAppTools, etc.)
+│   ├── hooks/                # React hooks (useApp, useHostContext, useToolData, useAppState, useUpdateModelContext, useAppTools, useCreateSamplingMessage, useRegisterTool, useSendToolListChanged, etc.)
 │   ├── mcp/                  # MCP server (runMCPServer, production-server, resource registration)
 │   ├── host/                 # Host detection (detectHost, isChatGPT, isClaude)
 │   │   └── chatgpt/          # ChatGPT-specific: useUploadFile, useRequestModal, useRequestCheckout
@@ -314,4 +314,4 @@ The SDK's main entry (`app.d.ts`) uses `export * from "./types"` to re-export al
 - Simulations discovered from `tests/simulations/*.json` (flat directory, `"tool"` string field references tool filename)
 - Optional server entry at `src/server.ts` (exports `server: ServerConfig` for identity/icons, `auth()` for request authentication)
 - Hook file naming: `use-{kebab-name}.ts` → export `use{PascalName}` (e.g., `use-download-file.ts` → `useDownloadFile`)
-- SDK re-exports in `src/index.ts` are organized into four sections: core classes/functions, method constants, Zod schemas, protocol types
+- SDK re-exports in `src/index.ts` are organized into five sections: core classes/functions, app options/tool registration/Standard Schema types, method constants, Zod schemas, protocol types

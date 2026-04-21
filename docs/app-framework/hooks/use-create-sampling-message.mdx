@@ -1,0 +1,102 @@
+---
+title: "useCreateSamplingMessage"
+description: "Request LLM completions from the host."
+keywords: ["MCP Apps", "ChatGPT Apps", "React hooks", "sampling", "LLM", "completions"]
+---
+
+<Badge color="yellow">sunpeak API</Badge>
+
+## Overview
+
+Returns a function to request LLM completions from the host via MCP `sampling/createMessage`. The host decides which model to use and may modify or reject the request.
+
+Check `getHostCapabilities()?.sampling` before calling. For tool-augmented completions, check `?.sampling?.tools`.
+
+## Import
+
+```tsx
+import { useCreateSamplingMessage } from 'sunpeak';
+```
+
+## Signature
+
+```tsx
+function useCreateSamplingMessage(): (
+  params: CreateSamplingMessageParams
+) => Promise<CreateMessageResult | CreateMessageResultWithTools | undefined>
+```
+
+### CreateSamplingMessageParams
+
+Standard MCP `CreateMessageRequest` params:
+
+<ResponseField name="messages" type="SamplingMessage[]" required>
+  Conversation messages to send to the model.
+</ResponseField>
+
+<ResponseField name="maxTokens" type="number" required>
+  Maximum tokens in the response.
+</ResponseField>
+
+<ResponseField name="systemPrompt" type="string">
+  System prompt for the model.
+</ResponseField>
+
+<ResponseField name="temperature" type="number">
+  Sampling temperature.
+</ResponseField>
+
+<ResponseField name="tools" type="Tool[]">
+  Tools the model can call. When provided, the result may include `tool_use` blocks.
+</ResponseField>
+
+## Returns
+
+<ResponseField name="createSamplingMessage" type="(params) => Promise<CreateMessageResult | CreateMessageResultWithTools | undefined>">
+  Function to request an LLM completion.
+</ResponseField>
+
+### CreateMessageResult
+
+<ResponseField name="model" type="string">
+  Model used by the host.
+</ResponseField>
+
+<ResponseField name="role" type="string">
+  Response role (typically `"assistant"`).
+</ResponseField>
+
+<ResponseField name="content" type="Content">
+  Response content block.
+</ResponseField>
+
+<ResponseField name="stopReason" type="string">
+  Why the model stopped (`"endTurn"`, `"toolUse"`, etc.).
+</ResponseField>
+
+## Usage
+
+```tsx
+import { useCreateSamplingMessage, useHostInfo } from 'sunpeak';
+
+function SummaryButton({ text }: { text: string }) {
+  const createSamplingMessage = useCreateSamplingMessage();
+  const { hostCapabilities } = useHostInfo();
+
+  if (!hostCapabilities?.sampling) return null;
+
+  const handleSummarize = async () => {
+    const result = await createSamplingMessage({
+      messages: [
+        { role: "user", content: { type: "text", text: `Summarize: ${text}` } },
+      ],
+      maxTokens: 200,
+    });
+    if (result) {
+      console.log("Summary:", result.content);
+    }
+  };
+
+  return <button onClick={handleSummarize}>Summarize</button>;
+}
+```

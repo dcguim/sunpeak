@@ -269,6 +269,73 @@ async requestTeardown(params?: {}): Promise<void>
 await app.requestTeardown();
 ```
 
+## createSamplingMessage
+
+Request an LLM completion from the host via standard MCP `sampling/createMessage`. The host has full discretion over model selection and may modify or reject the request. Check `app.getHostCapabilities()?.sampling` before calling.
+
+```ts
+async createSamplingMessage(
+  params: CreateMessageRequest["params"],
+  options?: RequestOptions,
+): Promise<CreateMessageResult | CreateMessageResultWithTools>
+```
+
+```ts
+const result = await app.createSamplingMessage({
+  messages: [
+    { role: "user", content: { type: "text", text: "Summarize this." } },
+  ],
+  maxTokens: 100,
+});
+console.log(result.content);
+```
+
+When `params.tools` is provided, the result may contain `tool_use` blocks and `stopReason: "toolUse"`. Check `getHostCapabilities()?.sampling?.tools` before passing tools.
+
+## registerTool
+
+Register a tool that the host can call. Uses Standard Schema (Zod, ArkType, Valibot) for input/output validation. Returns a handle with `enable()`, `disable()`, `remove()`, and `update()` methods.
+
+```ts
+registerTool<OutputArgs, InputArgs>(
+  name: string,
+  config: {
+    title?: string;
+    description?: string;
+    inputSchema?: InputArgs;
+    outputSchema?: OutputArgs;
+    annotations?: ToolAnnotations;
+    _meta?: Record<string, unknown>;
+  },
+  cb: AppToolCallback<InputArgs, OutputArgs>,
+): RegisteredAppTool
+```
+
+```ts
+const handle = app.registerTool("get_selection", {
+  description: "Get the user's current selection",
+}, () => ({
+  content: [{ type: "text", text: selectedText }],
+}));
+
+// Later: update, disable, or remove
+handle.update({ description: "Updated description" });
+handle.disable();
+handle.remove();
+```
+
+## sendToolListChanged
+
+Notify the host that the app's tool list has changed. Call this after `registerTool`, `remove()`, `enable()`, or `disable()`.
+
+```ts
+async sendToolListChanged(params?: {}): Promise<void>
+```
+
+```ts
+await app.sendToolListChanged();
+```
+
 ## [sendSizeChanged](/mcp-apps/app/requests/send-size-changed)
 
 Manually notify the host of a UI size change. If `autoResize` is enabled (default), this is called automatically.
@@ -282,5 +349,5 @@ app.sendSizeChanged({ width: 400, height: 600 });
 ```
 
 <Tip>
-The [sunpeak framework](/quickstart) provides React convenience hooks that wrap these methods: [`useCallServerTool`](/app-framework/hooks/use-call-server-tool), [`useDownloadFile`](/app-framework/hooks/use-download-file), [`useListServerResources`](/app-framework/hooks/use-list-server-resources), [`useReadServerResource`](/app-framework/hooks/use-read-server-resource), [`useSendMessage`](/app-framework/hooks/use-send-message), [`useUpdateModelContext`](/app-framework/hooks/use-update-model-context), [`useOpenLink`](/app-framework/hooks/use-open-link), [`useRequestDisplayMode`](/app-framework/hooks/use-request-display-mode), [`useRequestTeardown`](/app-framework/hooks/use-request-teardown), and [`useSendLog`](/app-framework/hooks/use-send-log).
+The [sunpeak framework](/quickstart) provides React convenience hooks that wrap these methods: [`useCallServerTool`](/app-framework/hooks/use-call-server-tool), [`useCreateSamplingMessage`](/app-framework/hooks/use-create-sampling-message), [`useDownloadFile`](/app-framework/hooks/use-download-file), [`useListServerResources`](/app-framework/hooks/use-list-server-resources), [`useReadServerResource`](/app-framework/hooks/use-read-server-resource), [`useRegisterTool`](/app-framework/hooks/use-register-tool), [`useSendMessage`](/app-framework/hooks/use-send-message), [`useSendToolListChanged`](/app-framework/hooks/use-send-tool-list-changed), [`useUpdateModelContext`](/app-framework/hooks/use-update-model-context), [`useOpenLink`](/app-framework/hooks/use-open-link), [`useRequestDisplayMode`](/app-framework/hooks/use-request-display-mode), [`useRequestTeardown`](/app-framework/hooks/use-request-teardown), and [`useSendLog`](/app-framework/hooks/use-send-log).
 </Tip>

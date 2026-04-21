@@ -14,6 +14,16 @@ export {
   getDocumentTheme,
 } from '@modelcontextprotocol/ext-apps';
 
+// App options, tool registration, and Standard Schema types
+export type {
+  AppOptions,
+  AppToolResult,
+  AppToolCallback,
+  RegisteredAppTool,
+  StandardSchemaV1,
+  StandardSchemaWithJSON,
+} from '@modelcontextprotocol/ext-apps';
+
 // Protocol method constants
 export {
   INITIALIZE_METHOD,

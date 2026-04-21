@@ -12,6 +12,9 @@ import {
 import type {
   CallToolRequest,
   CallToolResult,
+  CreateMessageRequest,
+  CreateMessageResult,
+  CreateMessageResultWithTools,
   LoggingMessageNotification,
 } from '@modelcontextprotocol/sdk/types.js';
 
@@ -34,6 +37,7 @@ const DEFAULT_HOST_CAPABILITIES: McpUiHostCapabilities = {
   updateModelContext: { text: {} },
   message: { text: {} },
   sandbox: {},
+  sampling: { tools: {} },
 };
 
 export interface McpAppHostOptions {
@@ -49,6 +53,9 @@ export interface McpAppHostOptions {
   onSizeChanged?: (params: { width?: number; height?: number }) => void;
   onLog?: (params: LoggingMessageNotification['params']) => void;
   onCallTool?: (params: CallToolRequest['params']) => CallToolResult | Promise<CallToolResult>;
+  onCreateSamplingMessage?: (
+    params: CreateMessageRequest['params']
+  ) => Promise<CreateMessageResult | CreateMessageResultWithTools>;
   onDownloadFile?: (contents: unknown[]) => void;
   /** Called when the app requests teardown (app-initiated close). */
   onRequestTeardown?: () => void;
@@ -220,6 +227,37 @@ export class McpAppHost {
         result
       );
       return result;
+    };
+
+    this.bridge.oncreatesamplingmessage = async (params) => {
+      if (this.options.onCreateSamplingMessage) {
+        const result = await this.options.onCreateSamplingMessage(params);
+        debugLog(
+          `%c[MCP ↓]%c host → app: %ccreateSamplingMessage result`,
+          'color:#f9a8d4',
+          'color:inherit',
+          'color:#93c5fd',
+          result
+        );
+        return result;
+      }
+      const fallback: CreateMessageResult = {
+        model: 'inspector-stub',
+        stopReason: 'endTurn',
+        role: 'assistant',
+        content: {
+          type: 'text',
+          text: '[Inspector] Sampling not configured',
+        },
+      };
+      debugLog(
+        `%c[MCP ↓]%c host → app: %ccreateSamplingMessage result (stub)`,
+        'color:#f9a8d4',
+        'color:inherit',
+        'color:#93c5fd',
+        fallback
+      );
+      return fallback;
     };
 
     this.bridge.ondownloadfile = async ({ contents }) => {

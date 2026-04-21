@@ -364,8 +364,8 @@ export function createProductionMcpServer(config: ProductionServerConfig): McpSe
       registerAppTool(
         mcpServer,
         tool.name,
-        toolConfig as Parameters<typeof registerAppTool>[2],
-        makeCallback() as Parameters<typeof registerAppTool>[3]
+        toolConfig as unknown as Parameters<typeof registerAppTool>[2],
+        makeCallback() as unknown as Parameters<typeof registerAppTool>[3]
       );
     } else {
       // ── Plain tool (no UI): register directly via mcpServer.registerTool() ──
