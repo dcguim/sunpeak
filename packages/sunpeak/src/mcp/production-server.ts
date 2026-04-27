@@ -1,4 +1,5 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
+import { gzipSync } from 'node:zlib';
 import { URL } from 'node:url';
 import { randomUUID } from 'node:crypto';
 
@@ -153,6 +154,14 @@ export interface ProductionServerConfig {
    * - The MCP SDK's stateless transport is used (`sessionIdGenerator: undefined`)
    */
   stateless?: boolean;
+  /**
+   * Optional callback to dynamically filter which resources are exposed via
+   * `resources/list` and `resources/read`. Called with the full resources array;
+   * return the subset to serve. Tools referencing excluded resources are still
+   * registered (with `resourceUri` metadata intact), but the resource HTML is
+   * not served. Most useful in stateless mode (fresh server per request).
+   */
+  resourceFilter?: (resources: ProductionResource[]) => ProductionResource[];
 }
 
 /**
@@ -194,6 +203,12 @@ export interface WebHandlerConfig {
    * - The MCP SDK's stateless transport is used (`sessionIdGenerator: undefined`)
    */
   stateless?: boolean;
+  /**
+   * Optional callback to dynamically filter which resources are exposed via
+   * `resources/list` and `resources/read`. Called with the full resources array;
+   * return the subset to serve.
+   */
+  resourceFilter?: (resources: ProductionResource[]) => ProductionResource[];
 }
 
 /**
@@ -203,6 +218,8 @@ export interface WebHandlerConfig {
 interface InternalServerConfig extends ProductionServerConfig {
   /** Detected client name from HTTP headers (e.g. 'openai-mcp', 'claude') */
   _clientName?: string;
+  /** When set, only these resource names are registered for resources/list. */
+  _servedResourceNames?: Set<string>;
 }
 
 /** Build an InternalServerConfig from any handler config + detected client name. */
@@ -210,6 +227,15 @@ function toInternalConfig(
   config: ProductionServerConfig | WebHandlerConfig,
   clientName: string | undefined
 ): InternalServerConfig {
+  const resourceFilter = (config as ProductionServerConfig).resourceFilter;
+  let servedNames: Set<string> | undefined;
+  if (resourceFilter) {
+    const served = resourceFilter(config.resources);
+    servedNames = new Set(served.map((r) => r.name));
+    log('info', `Resource filter: ${config.resources.length} → ${served.length}`, {
+      served: [...servedNames],
+    });
+  }
   return {
     name: config.name,
     version: config.version,
@@ -219,7 +245,9 @@ function toInternalConfig(
     serverUrl: config.serverUrl,
     enableJsonResponse: config.enableJsonResponse,
     stateless: config.stateless,
+    resourceFilter: (config as ProductionServerConfig).resourceFilter,
     _clientName: clientName,
+    _servedResourceNames: servedNames,
   };
 }
 
@@ -312,7 +340,11 @@ export function createProductionMcpServer(config: ProductionServerConfig): McpSe
     if (res) {
       // ── UI tool: register resource + tool via ext-apps helper ──
 
-      // Register resource (once per URI)
+      // Register resource (once per URI).
+      // When _servedResourceNames is set, resources not in the set are registered
+      // with a minimal placeholder HTML instead of the full widget. This keeps all
+      // resources visible in resources/list (so tool selection isn't affected) while
+      // reducing bandwidth for resources not needed in the current state.
       if (!registeredResources.has(res.uri)) {
         registeredResources.add(res.uri);
 
@@ -322,6 +354,12 @@ export function createProductionMcpServer(config: ProductionServerConfig): McpSe
         const finalMeta = serverUrl
           ? injectDefaultDomain(resolvedMeta, clientName, serverUrl)
           : resolvedMeta;
+
+        const servedNames = (config as InternalServerConfig)._servedResourceNames;
+        const isServed = !servedNames || servedNames.has(res.name);
+        const html = isServed
+          ? res.html
+          : '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body><div id="root"></div></body></html>';
 
         registerAppResource(
           mcpServer,
@@ -336,7 +374,7 @@ export function createProductionMcpServer(config: ProductionServerConfig): McpSe
               {
                 uri: res.uri,
                 mimeType: RESOURCE_MIME_TYPE,
-                text: res.html,
+                text: html,
                 _meta: finalMeta,
               },
             ],
@@ -476,18 +514,47 @@ function nodeReqToWebRequest(req: IncomingMessage): Request {
 }
 
 /** Pipe a Web Standard Response (including streaming SSE) back to a Node.js ServerResponse. */
-async function pipeWebResponseToNode(webResponse: Response, res: ServerResponse): Promise<void> {
+async function pipeWebResponseToNode(
+  webResponse: Response,
+  res: ServerResponse,
+  acceptEncoding?: string
+): Promise<void> {
   const headers: Record<string, string> = {};
   webResponse.headers.forEach((value, key) => {
     headers[key] = value;
   });
-  res.writeHead(webResponse.status, headers);
 
   if (!webResponse.body) {
+    res.writeHead(webResponse.status, headers);
     res.end();
     return;
   }
 
+  // Gzip non-streaming JSON responses unconditionally.
+  // Resource HTML embedded in JSON can be 400KB+; gzip typically achieves 75% reduction.
+  // SSE streams (text/event-stream) are left uncompressed.
+  const contentType = headers['content-type'] ?? '';
+  const isJson = contentType.includes('application/json');
+
+  if (isJson) {
+    // Collect the full body, compress, and send in one shot.
+    const chunks: Uint8Array[] = [];
+    const reader = webResponse.body.getReader();
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+    }
+    const raw = Buffer.concat(chunks);
+    const compressed = gzipSync(raw);
+    headers['content-encoding'] = 'gzip';
+    headers['content-length'] = String(compressed.length);
+    res.writeHead(webResponse.status, headers);
+    res.end(compressed);
+    return;
+  }
+
+  res.writeHead(webResponse.status, headers);
   const reader = webResponse.body.getReader();
   res.on('close', () => reader.cancel());
   try {
@@ -636,7 +703,7 @@ export function createMcpHandler(
         parsedBody: ctx.parsedBody,
         authInfo: ctx.authInfo,
       });
-      await pipeWebResponseToNode(addCorsHeaders(webResponse), res);
+      await pipeWebResponseToNode(addCorsHeaders(webResponse), res, req.headers['accept-encoding'] as string | undefined);
     };
   }
 
@@ -683,7 +750,7 @@ export function createMcpHandler(
         parsedBody: ctx.parsedBody,
         authInfo: ctx.authInfo,
       });
-      await pipeWebResponseToNode(addCorsHeaders(webResponse), res);
+      await pipeWebResponseToNode(addCorsHeaders(webResponse), res, req.headers['accept-encoding'] as string | undefined);
       return;
     }
 
@@ -736,7 +803,7 @@ export function createMcpHandler(
         parsedBody: ctx.parsedBody,
         authInfo: ctx.authInfo,
       });
-      await pipeWebResponseToNode(addCorsHeaders(webResponse), res);
+      await pipeWebResponseToNode(addCorsHeaders(webResponse), res, req.headers['accept-encoding'] as string | undefined);
       return;
     }
 

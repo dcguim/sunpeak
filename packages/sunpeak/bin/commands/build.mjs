@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { existsSync, rmSync, readdirSync, readFileSync, writeFileSync, mkdirSync, copyFileSync, unlinkSync } from 'fs';
+import { gzipSync } from 'node:zlib';
 import path from 'path';
 import { createRequire } from 'module';
 import { pathToFileURL } from 'url';
@@ -306,6 +307,13 @@ export async function build(projectRoot = process.cwd(), { quiet = false } = {})
 
         if (existsSync(builtJsFile)) {
           const jsContents = readFileSync(builtJsFile, 'utf-8');
+          const jsBytes = Buffer.from(jsContents, 'utf-8');
+          const compressed = gzipSync(jsBytes, { level: 9 });
+          const b64 = compressed.toString('base64');
+          const rawSize = (jsBytes.length / 1024).toFixed(0);
+          const gzSize = (compressed.length / 1024).toFixed(0);
+          log(`  ${kebabName}: ${rawSize}KB → ${gzSize}KB gzipped (${((1 - compressed.length / jsBytes.length) * 100).toFixed(0)}% reduction)`);
+
           const html = `<!DOCTYPE html>
 <html>
 <head>
@@ -315,7 +323,7 @@ export async function build(projectRoot = process.cwd(), { quiet = false } = {})
 <body>
   <div id="root"></div>
   <script>
-${jsContents}
+(async()=>{const b=Uint8Array.from(atob("${b64}"),c=>c.charCodeAt(0));const ds=new DecompressionStream("gzip");const w=ds.writable.getWriter();w.write(b);w.close();const r=ds.readable.getReader();const chunks=[];for(;;){const{done,value}=await r.read();if(done)break;chunks.push(value);}const js=new TextDecoder().decode(await new Blob(chunks).arrayBuffer());const s=document.createElement("script");s.textContent=js;document.head.appendChild(s);})();
   </script>
 </body>
 </html>`;

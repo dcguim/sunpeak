@@ -162,6 +162,7 @@ export async function start(projectRoot = process.cwd(), args = []) {
 
   const serverEntryPath = join(distDir, 'server.js');
   let auth = undefined;
+  let resourceFilter = undefined;
   let serverConfig = {};
 
   if (existsSync(serverEntryPath)) {
@@ -170,6 +171,10 @@ export async function start(projectRoot = process.cwd(), args = []) {
       if (typeof serverEntry.auth === 'function') {
         auth = serverEntry.auth;
         console.log('Loaded auth from server entry');
+      }
+      if (typeof serverEntry.resourceFilter === 'function') {
+        resourceFilter = serverEntry.resourceFilter;
+        console.log('Loaded resourceFilter from server entry');
       }
       if (serverEntry.server) {
         serverConfig = serverEntry.server;
@@ -194,7 +199,7 @@ export async function start(projectRoot = process.cwd(), args = []) {
   if (stateless) console.log('Stateless mode enabled (no session tracking)');
 
   startProductionHttpServer(
-    { name, version, serverInfo: serverConfig, tools, resources, auth, stateless, ...(sse ? { enableJsonResponse: false } : {}) },
+    { name, version, serverInfo: serverConfig, tools, resources, auth, resourceFilter, stateless, ...(sse ? { enableJsonResponse: false } : {}) },
     { port, host }
   );
 }
